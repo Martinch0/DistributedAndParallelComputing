@@ -87,10 +87,31 @@ float** matrix_mul(float **a, float **b, int ax, int ay, int bx, int by)
 	return result;
 }
 
+float** rotation_matrix(int angle)
+{
+	float** rotation = new float*[4];
+	rotation[0] = new float[4];
+  rotation[0][0] = cos(angle);
+	rotation[0][1] = 0;
+  rotation[0][2] = sin(angle);
+  rotation[0][3] = 0;
+	rotation[1] = new float[4];
+  rotation[1][0] = rotation[1][2] = rotation[1][3] = 0;
+	rotation[1][1] = 1;
+	rotation[2] = new float[4];
+  rotation[2][0] = -sin(angle);
+	rotation[2][1] = rotation[2][3] = 0;
+  rotation[2][2] = cos(angle);
+	rotation[3] = new float[4];
+  rotation[3][0] = rotation[3][1] = rotation[3][2] = 0;
+  rotation[3][3] = 1;
+  return rotation;
+}
+
 // Sweep the ellypse
 void sweep()
 {
-  //Martin: do one ring after the other.
+	
 }
 
 // Generate the surface table
