@@ -67,23 +67,21 @@ void writeToConsole(float** arr, int x, int y) {
 // Matrix multiplication
 float** matrix_mul(float **a, float **b, int ax, int ay, int bx, int by)
 {
-  cout << "bleh12321321" << endl;
 	float** result = new float * [ax];
-
   for(int i=0; i < ax; i++) {
     result[i] = new float[by];
   }
-
   for(int i=0; i < ax; i++) {
+
     for(int j=0; j < by; j++) {
       float sum = 0;
-      for(int k=0; k < ax; k++) {
-        sum += a[ax][k] * b[k][ax];
+
+      for(int k=0; k < ay; k++) {
+        sum += a[i][k] * b[k][j];
       }
       result[i][j] = sum;
     }
   }
-
 	return result;
 }
 
@@ -138,34 +136,20 @@ int main(int argc, char** argv)
 
   cout << "bleh" << endl;
 
-  float ** arr1 = new float * [1];
-  arr1[0] = new float[4];
-  arr1[0][0] = 1;
-  arr1[0][1] = 1;
-  arr1[0][2] = 1;
-  arr1[0][3] = 1;
+  float ** arr1 = rotation_matrix(45);
 
 
   cout << "bleh2" << endl;
 
-  float ** arr2 = new float * [4];
-  arr2 [0] = new float[1];
-  arr2 [1] = new float[1];
-  arr2 [2] = new float[1];
-  arr2 [3] = new float[1];
-
-  arr2[0][0] = 1;
-  arr2[1][0] = 1;
-  arr2[2][0] = 1;
-  arr2[3][0] = 1;
+  float ** arr2 = rotation_matrix(45);
 
   cout << "bleh3" << endl;
 
-  float ** arr3 = matrix_mul(arr1, arr2, 4, 1, 1, 4);
+  float ** arr3 = matrix_mul(arr1, arr2, 4, 4, 4, 4);
 
   cout << "bleh4" << endl;
 
-  writeToConsole(arr3, 1, 4);
+  writeToConsole(arr3, 4, 4);
 
   //
   // INIT DATA HERE
