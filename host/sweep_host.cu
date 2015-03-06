@@ -4,11 +4,12 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <algorithm>
 #include <cstdlib>
 #include <vector>
 using namespace std;
 
-float* h_ellipse_vertex;
+float** h_ellipse_vertex;
 float* h_torus_vertex;
 float* h_torus_surface;
 float* sweep_origin;
@@ -16,23 +17,49 @@ float* sweep_origin;
 int number_sweep_steps;
 int number_ellipse_points;
 
+// Count the lines in a file
+int countLines(char *filename) {
+	ifstream fin(filename);
+	int input_size = count(istreambuf_iterator<char>(fin), istreambuf_iterator<char>(), '\n');
+	fin.seekg(ios::beg);
+	return input_size;
+}
+
 // Read from file
-void readFromFile(char *filename, float *arr)
+float** readFromFile(char *filename)
 {
-  //Martin
+	ifstream fin(filename);
+	int len = countLines(filename);
+	number_ellipse_points = len;
+	float **arr = new float*[len];
+	for(int i=0; i<len; i++) {
+		arr[i] = new float[4];
+		fin>>arr[i][0]>>arr[i][1]>>arr[i][2];
+		arr[i][3] = 1.0f;
+	}
+	return arr;
 }
 
 // Write to file
-void writeToFile(char *filename, float* arr)
+void writeToFile(char *filename, float** arr, int x, int y)
 {
-  //Martin
+	ofstream fout(filename);
+	for(int i = 0; i<y; i++) {
+		for(int j=0; j<x; j++) {
+			fout<<arr[i][j]<<' ';
+    }
+		fout<<endl;
+  }
+	fout.flush();
+	fout.close();
 }
 
 // Matrix multiplication
-float* matrix_mul(float *a, float *b, int ax, int ay, int bx, int by)
+float** matrix_mul(float **a, float **b, int ax, int ay, int bx, int by)
 {
-  float* result = new float[ax][by];
+	//  float** result = new float[ax];
   //Yu-Yang
+	return NULL;
 }
 
 // Sweep the ellypse
@@ -57,6 +84,11 @@ int main(int argc, char** argv)
 	cutilSafeCall(cudaGetDevice(&devID));
 	cutilSafeCall(cudaGetDeviceProperties(&props, devID));
   
+	cout<<"Start reading"<<endl;
+	float **h_ellipse_vertex = readFromFile("../ellipse_matrix.txt");
+	for(int i=0; i<number_ellipse_points; i++) {
+		cout<<h_ellipse_vertex[i][0]<<' '<<h_ellipse_vertex[i][1]<<' '<<h_ellipse_vertex[i][2]<<' '<<h_ellipse_vertex[i][3]<<endl;
+	}
   //
   // INIT DATA HERE
   //
