@@ -54,12 +54,37 @@ void writeToFile(char *filename, float** arr, int x, int y)
 	fout.close();
 }
 
+// Write to console
+void writeToConsole(float** arr, int x, int y) {
+	for(int i = 0; i<y; i++) {
+		for(int j=0; j<x; j++) {
+			cout<<arr[i][j]<<' ';
+    }
+		cout<<endl;
+  }
+}
+
 // Matrix multiplication
 float** matrix_mul(float **a, float **b, int ax, int ay, int bx, int by)
 {
-	//  float** result = new float[ax];
-  //Yu-Yang
-	return NULL;
+  cout << "bleh12321321" << endl;
+	float** result = new float * [ax];
+
+  for(int i=0; i < ax; i++) {
+    result[i] = new float[by];
+  }
+
+  for(int i=0; i < ax; i++) {
+    for(int j=0; j < by; j++) {
+      float sum = 0;
+      for(int k=0; k < ax; k++) {
+        sum += a[ax][k] * b[k][ax];
+      }
+      result[i][j] = sum;
+    }
+  }
+
+	return result;
 }
 
 // Sweep the ellypse
@@ -86,9 +111,41 @@ int main(int argc, char** argv)
   
 	cout<<"Start reading"<<endl;
 	float **h_ellipse_vertex = readFromFile("../ellipse_matrix.txt");
-	for(int i=0; i<number_ellipse_points; i++) {
-		cout<<h_ellipse_vertex[i][0]<<' '<<h_ellipse_vertex[i][1]<<' '<<h_ellipse_vertex[i][2]<<' '<<h_ellipse_vertex[i][3]<<endl;
-	}
+	//for(int i=0; i<number_ellipse_points; i++) {
+	//	cout<<h_ellipse_vertex[i][0]<<' '<<h_ellipse_vertex[i][1]<<' '<<h_ellipse_vertex[i][2]<<' '<<h_ellipse_vertex[i][3]<<endl;
+	//}
+
+  cout << "bleh" << endl;
+
+  float ** arr1 = new float * [1];
+  arr1[0] = new float[4];
+  arr1[0][0] = 1;
+  arr1[0][1] = 1;
+  arr1[0][2] = 1;
+  arr1[0][3] = 1;
+
+
+  cout << "bleh2" << endl;
+
+  float ** arr2 = new float * [4];
+  arr2 [0] = new float[1];
+  arr2 [1] = new float[1];
+  arr2 [2] = new float[1];
+  arr2 [3] = new float[1];
+
+  arr2[0][0] = 1;
+  arr2[1][0] = 1;
+  arr2[2][0] = 1;
+  arr2[3][0] = 1;
+
+  cout << "bleh3" << endl;
+
+  float ** arr3 = matrix_mul(arr1, arr2, 4, 1, 1, 4);
+
+  cout << "bleh4" << endl;
+
+  writeToConsole(arr3, 1, 4);
+
   //
   // INIT DATA HERE
   //
