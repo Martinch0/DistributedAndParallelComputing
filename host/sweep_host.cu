@@ -127,7 +127,7 @@ float** rotation_matrix(int angle)
   rotation[3][3] = 1;
   return rotation;
 }
-
+  
 // Sweep the ellipse
 void sweep()
 {
@@ -204,16 +204,16 @@ int**  generateSurfaceTable()
 
 int main(int argc, char** argv)
 {
-	//CUDA properties
-	int devID;
-	cudaDeviceProp props;
-
-	// get number of SMs on this GPU
-	cutilSafeCall(cudaGetDevice(&devID));
-	cutilSafeCall(cudaGetDeviceProperties(&props, devID));
+  //CUDA properties
+  int devID;
+  cudaDeviceProp props;
   
-	cout<<"Start reading"<<endl;
-	float **h_ellipse_vertex = readFromFile("../ellipse_matrix.txt");
+  // get number of SMs on this GPU
+  cutilSafeCall(cudaGetDevice(&devID));
+  cutilSafeCall(cudaGetDeviceProperties(&props, devID));
+
+  cout<<"Start reading"<<endl;
+  float **h_ellipse_vertex = readFromFile("../ellipse_matrix.txt");
 
   float ** arr1 = new float*[2];
   arr1[0] = new float[2];
