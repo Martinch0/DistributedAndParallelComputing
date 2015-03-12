@@ -14,10 +14,14 @@ float* h_torus_vertex;
 float* h_torus_surface;
 float* sweep_origin;
 
-int number_sweep_steps;
+int number_sweep_steps = 10;
 int number_ellipse_points;
 
-// Count the lines in a file
+char SEMI_COLON_CHAR = 59;
+
+///////////////////////////////
+// Count the lines in a file //
+///////////////////////////////
 int countLines(char *filename) {
 	ifstream fin(filename);
 	int input_size = count(istreambuf_iterator<char>(fin), istreambuf_iterator<char>(), '\n');
@@ -25,7 +29,9 @@ int countLines(char *filename) {
 	return input_size;
 }
 
-// Read from file
+////////////////////
+// Read from file //
+////////////////////
 float** readFromFile(char *filename)
 {
 	ifstream fin(filename);
@@ -40,31 +46,41 @@ float** readFromFile(char *filename)
 	return arr;
 }
 
-// Write to file
-void writeToFile(char *filename, float** arr, int x, int y)
+///////////////////
+// Write to file //
+///////////////////
+// Uses templates
+template <typename T>
+void writeToFile(char *filename, T** arr, int x, int y)
 {
 	ofstream fout(filename);
-	for(int i = 0; i<y; i++) {
-		for(int j=0; j<x; j++) {
+	for(int i = 0; i<x; i++) {
+		for(int j=0; j<y; j++) {
 			fout<<arr[i][j]<<' ';
     }
-		fout<<endl;
+		fout<< ' ' << SEMI_COLON_CHAR << ' ' <<endl;
   }
 	fout.flush();
 	fout.close();
 }
 
-// Write to console
-void writeToConsole(float** arr, int x, int y) {
-	for(int i = 0; i<y; i++) {
-		for(int j=0; j<x; j++) {
+//////////////////////
+// Write to console //
+//////////////////////
+// Uses templates
+template <typename T>
+void writeToConsole(T** arr, int x, int y) {
+	for(int i = 0; i<x; i++) {
+		for(int j=0; j<y; j++) {
 			cout<<arr[i][j]<<' ';
     }
-		cout<<endl;
+		cout<< ' ' << SEMI_COLON_CHAR << ' ' <<endl;
   }
 }
 
-// Matrix multiplication
+///////////////////////////
+// Matrix multiplication //
+///////////////////////////
 // X is the number of ROWS, Y is the number of COLS.
 float** matrix_mul(float **a, float **b, int ax, int ay, int bx, int by)
 {
@@ -88,7 +104,9 @@ float** matrix_mul(float **a, float **b, int ax, int ay, int bx, int by)
 	return result;
 }
 
-// Rotation Transformation Matrix
+////////////////////////////////////
+// Rotation Transformation Matrix //
+////////////////////////////////////
 float** rotation_matrix(int angle)
 {
 	float** rotation = new float*[4];
@@ -116,10 +134,72 @@ void sweep()
 	
 }
 
-// Generate the surface table
-void generateSurfaceTable()
+////////////////////////////////
+// Generate the surface table //
+////////////////////////////////
+int**  generateSurfaceTable()
 {
   //Yu-Yang: assumming rings are one after the other.
+  //assumming matrixes are: arr[ellipse_number][x y z 1]
+ 
+  // we need a surface for every point in the torus
+  int number_torus_points = number_sweep_steps * number_ellipse_points;
+	int** surface_table = new int * [number_torus_points];
+  
+  //init array
+  for(int i=0; i < number_torus_points; i++) {
+    // every surface is made of 4 points
+    surface_table[i] = new int[4];
+  }
+
+  //for each ring on the torus
+  for(int i=0; i < number_sweep_steps; i++) {
+    //for each point on the ring
+    for(int j=0; j < number_ellipse_points; j++) {
+      
+      //torus point is the ring number * points in an ellipse plus current point counter.
+      int torus_point = (i*number_ellipse_points) + j + 1;
+
+      //if not last ring
+      if (torus_point + number_ellipse_points -1 < number_torus_points) {
+        
+        //last point in a ring
+        if (torus_point % number_ellipse_points == 0) {
+          //create surface square joining the last 2 points of the rings with the first two
+          surface_table[torus_point-1][0] = torus_point;
+          surface_table[torus_point-1][1] = torus_point + number_ellipse_points;
+          surface_table[torus_point-1][2] = torus_point + 1;
+          surface_table[torus_point-1][3] = torus_point + 1 - number_ellipse_points;
+        } else {
+          //create surface square        
+          surface_table[torus_point-1][0] = torus_point;
+          surface_table[torus_point-1][1] = torus_point + number_ellipse_points;
+          surface_table[torus_point-1][2] = torus_point + number_ellipse_points + 1;
+          surface_table[torus_point-1][3] = torus_point + 1;
+        }
+
+      //if last ring
+      } else {
+
+        //last point in a ring
+        if (torus_point % number_ellipse_points == 0) {
+          //create surface square joining the last 2 points of the torus with the first two
+          surface_table[torus_point-1][0] = torus_point;
+          surface_table[torus_point-1][1] = 0;
+          surface_table[torus_point-1][2] = 1;
+          surface_table[torus_point-1][3] = torus_point + 1 - number_ellipse_points;
+        } else {
+          //create surface square
+          surface_table[torus_point-1][0] = torus_point;
+          surface_table[torus_point-1][1] = (torus_point + number_ellipse_points) - number_torus_points;
+          surface_table[torus_point-1][2] = (torus_point + number_ellipse_points) - number_torus_points + 1;
+          surface_table[torus_point-1][3] = torus_point + 1;
+        }
+      } 
+    }
+  }
+
+  return surface_table;
 }
 
 int main(int argc, char** argv)
@@ -134,10 +214,6 @@ int main(int argc, char** argv)
   
 	cout<<"Start reading"<<endl;
 	float **h_ellipse_vertex = readFromFile("../ellipse_matrix.txt");
-	//for(int i=0; i<number_ellipse_points; i++) {
-	//	cout<<h_ellipse_vertex[i][0]<<' '<<h_ellipse_vertex[i][1]<<' '<<h_ellipse_vertex[i][2]<<' '<<h_ellipse_vertex[i][3]<<endl;
-	//}
-
 
   float ** arr1 = new float*[2];
   arr1[0] = new float[2];
@@ -159,10 +235,9 @@ int main(int argc, char** argv)
   arr2[1][1] = 1;
 
 
-  float ** arr3 = matrix_mul(arr1, arr2, 2, 2, 2, 2);
+  float ** arr3 = matrix_mul(arr2, arr1, 2, 2, 2, 2);
 
-
-  writeToConsole(rotation_matrix(45), 2, 2);
+  writeToConsole(arr3, 2, 2);
 
   //
   // INIT DATA HERE
