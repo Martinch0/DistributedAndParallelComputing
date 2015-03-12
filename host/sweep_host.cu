@@ -65,17 +65,20 @@ void writeToConsole(float** arr, int x, int y) {
 }
 
 // Matrix multiplication
+// X is the number of ROWS, Y is the number of COLS.
 float** matrix_mul(float **a, float **b, int ax, int ay, int bx, int by)
 {
 	float** result = new float * [ax];
+  //init array
   for(int i=0; i < ax; i++) {
     result[i] = new float[by];
   }
+  //for every row in the result
   for(int i=0; i < ax; i++) {
-
+    //for every column in the result
     for(int j=0; j < by; j++) {
       float sum = 0;
-
+      //find the sum of the multiplied row and column
       for(int k=0; k < ay; k++) {
         sum += a[i][k] * b[k][j];
       }
@@ -85,6 +88,7 @@ float** matrix_mul(float **a, float **b, int ax, int ay, int bx, int by)
 	return result;
 }
 
+// Rotation Transformation Matrix
 float** rotation_matrix(int angle)
 {
 	float** rotation = new float*[4];
@@ -106,7 +110,7 @@ float** rotation_matrix(int angle)
   return rotation;
 }
 
-// Sweep the ellypse
+// Sweep the ellipse
 void sweep()
 {
 	
@@ -134,22 +138,31 @@ int main(int argc, char** argv)
 	//	cout<<h_ellipse_vertex[i][0]<<' '<<h_ellipse_vertex[i][1]<<' '<<h_ellipse_vertex[i][2]<<' '<<h_ellipse_vertex[i][3]<<endl;
 	//}
 
-  cout << "bleh" << endl;
 
-  float ** arr1 = rotation_matrix(45);
+  float ** arr1 = new float*[2];
+  arr1[0] = new float[2];
+  arr1[1] = new float[2];
+
+  arr1[0][0] = 1;
+  arr1[0][1] = 2;
+  arr1[1][0] = 3;
+  arr1[1][1] = 4;
 
 
-  cout << "bleh2" << endl;
+  float ** arr2 = new float*[2];
+  arr2[0] = new float[2];
+  arr2[1] = new float[2];
 
-  float ** arr2 = rotation_matrix(45);
+  arr2[0][0] = 4;
+  arr2[0][1] = 3;
+  arr2[1][0] = 2;
+  arr2[1][1] = 1;
 
-  cout << "bleh3" << endl;
 
-  float ** arr3 = matrix_mul(arr1, arr2, 4, 4, 4, 4);
+  float ** arr3 = matrix_mul(arr1, arr2, 2, 2, 2, 2);
 
-  cout << "bleh4" << endl;
 
-  writeToConsole(arr3, 4, 4);
+  writeToConsole(rotation_matrix(45), 2, 2);
 
   //
   // INIT DATA HERE
