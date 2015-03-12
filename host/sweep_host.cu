@@ -23,10 +23,10 @@ char SEMI_COLON_CHAR = 59;
 // Count the lines in a file //
 ///////////////////////////////
 int countLines(char *filename) {
-	ifstream fin(filename);
-	int input_size = count(istreambuf_iterator<char>(fin), istreambuf_iterator<char>(), '\n');
-	fin.seekg(ios::beg);
-	return input_size;
+  ifstream fin(filename);
+  int input_size = count(istreambuf_iterator<char>(fin), istreambuf_iterator<char>(), '\n');
+  fin.seekg(ios::beg);
+  return input_size;
 }
 
 ////////////////////
@@ -34,16 +34,16 @@ int countLines(char *filename) {
 ////////////////////
 float** readFromFile(char *filename)
 {
-	ifstream fin(filename);
-	int len = countLines(filename);
-	number_ellipse_points = len;
-	float **arr = new float*[len];
-	for(int i=0; i<len; i++) {
-		arr[i] = new float[4];
-		fin>>arr[i][0]>>arr[i][1]>>arr[i][2];
-		arr[i][3] = 1.0f;
-	}
-	return arr;
+  ifstream fin(filename);
+  int len = countLines(filename);
+  number_ellipse_points = len;
+  float **arr = new float*[len];
+  for(int i=0; i<len; i++) {
+    arr[i] = new float[4];
+    fin>>arr[i][0]>>arr[i][1]>>arr[i][2];
+    arr[i][3] = 1.0f;
+  }
+  return arr;
 }
 
 ///////////////////
@@ -53,15 +53,15 @@ float** readFromFile(char *filename)
 template <typename T>
 void writeToFile(char *filename, T** arr, int x, int y)
 {
-	ofstream fout(filename);
-	for(int i = 0; i<x; i++) {
-		for(int j=0; j<y; j++) {
-			fout<<arr[i][j]<<' ';
+  ofstream fout(filename);
+  for(int i = 0; i<x; i++) {
+    for(int j=0; j<y; j++) {
+      fout<<arr[i][j]<<' ';
     }
-		fout<< ' ' << SEMI_COLON_CHAR << ' ' <<endl;
+    fout<< ' ' << SEMI_COLON_CHAR << ' ' <<endl;
   }
-	fout.flush();
-	fout.close();
+  fout.flush();
+  fout.close();
 }
 
 //////////////////////
@@ -70,11 +70,11 @@ void writeToFile(char *filename, T** arr, int x, int y)
 // Uses templates
 template <typename T>
 void writeToConsole(T** arr, int x, int y) {
-	for(int i = 0; i<x; i++) {
-		for(int j=0; j<y; j++) {
-			cout<<arr[i][j]<<' ';
+  for(int i = 0; i<x; i++) {
+    for(int j=0; j<y; j++) {
+      cout<<arr[i][j]<<' ';
     }
-		cout<< ' ' << SEMI_COLON_CHAR << ' ' <<endl;
+    cout<< ' ' << SEMI_COLON_CHAR << ' ' <<endl;
   }
 }
 
@@ -84,7 +84,7 @@ void writeToConsole(T** arr, int x, int y) {
 // X is the number of ROWS, Y is the number of COLS.
 float** matrix_mul(float **a, float **b, int ax, int ay, int bx, int by)
 {
-	float** result = new float * [ax];
+  float** result = new float * [ax];
   //init array
   for(int i=0; i < ax; i++) {
     result[i] = new float[by];
@@ -101,7 +101,7 @@ float** matrix_mul(float **a, float **b, int ax, int ay, int bx, int by)
       result[i][j] = sum;
     }
   }
-	return result;
+  return result;
 }
 
 ////////////////////////////////////
@@ -109,20 +109,20 @@ float** matrix_mul(float **a, float **b, int ax, int ay, int bx, int by)
 ////////////////////////////////////
 float** rotation_matrix(int angle)
 {
-	float** rotation = new float*[4];
-	rotation[0] = new float[4];
+  float** rotation = new float*[4];
+  rotation[0] = new float[4];
   rotation[0][0] = cos(angle);
-	rotation[0][1] = 0;
+  rotation[0][1] = 0;
   rotation[0][2] = sin(angle);
   rotation[0][3] = 0;
-	rotation[1] = new float[4];
+  rotation[1] = new float[4];
   rotation[1][0] = rotation[1][2] = rotation[1][3] = 0;
-	rotation[1][1] = 1;
-	rotation[2] = new float[4];
+  rotation[1][1] = 1;
+  rotation[2] = new float[4];
   rotation[2][0] = -sin(angle);
-	rotation[2][1] = rotation[2][3] = 0;
+  rotation[2][1] = rotation[2][3] = 0;
   rotation[2][2] = cos(angle);
-	rotation[3] = new float[4];
+  rotation[3] = new float[4];
   rotation[3][0] = rotation[3][1] = rotation[3][2] = 0;
   rotation[3][3] = 1;
   return rotation;
@@ -131,7 +131,7 @@ float** rotation_matrix(int angle)
 // Sweep the ellipse
 void sweep()
 {
-	
+  
 }
 
 ////////////////////////////////
@@ -144,7 +144,7 @@ int**  generateSurfaceTable()
  
   // we need a surface for every point in the torus
   int number_torus_points = number_sweep_steps * number_ellipse_points;
-	int** surface_table = new int * [number_torus_points];
+  int** surface_table = new int * [number_torus_points];
   
   //init array
   for(int i=0; i < number_torus_points; i++) {
@@ -249,27 +249,27 @@ int main(int argc, char** argv)
   cout << "Rotational sweep origin : " << "[" << sweep_origin[0] << ", " << sweep_origin[1] << ", " << sweep_origin[2] << "]" << endl;
   
   // create a timer
-	unsigned int timer = 0;
+  unsigned int timer = 0;
   cutilCheckError(cutCreateTimer(&timer));
-	// start the timer
+  // start the timer
   cutilCheckError(cutStartTimer(timer));
 
-	//
-	//
-	// DO STUFF HERE
-	//
-	//
+  //
+  //
+  // DO STUFF HERE
+  //
+  //
 
-	// check if kernel execution generated and error
-	cutilCheckMsg("Kernel execution failed");
+  // check if kernel execution generated and error
+  cutilCheckMsg("Kernel execution failed");
 
-	// wait for device to finish
-	cudaThreadSynchronize();
+  // wait for device to finish
+  cudaThreadSynchronize();
 
-	cutilCheckError(cutStopTimer(timer));
+  cutilCheckError(cutStopTimer(timer));
 
-	// exit and clean up device status
-	cudaThreadExit();
+  // exit and clean up device status
+  cudaThreadExit();
 
-	return 0;
+  return 0;
 }
