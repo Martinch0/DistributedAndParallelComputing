@@ -12,12 +12,13 @@ using namespace std;
  #define PI 3.14159265
 
 float** h_ellipse_vertex;
-float* h_torus_vertex;
-float* h_torus_surface;
+float** h_torus_vertex;
+int** h_torus_surface;
 float* sweep_origin;
 
 int number_sweep_steps = 10;
 int number_ellipse_points;
+int number_torus_points;
 
 char SEMI_COLON_CHAR = 59;
 
@@ -53,15 +54,18 @@ float** readFromFile(char *filename)
 ///////////////////
 // Uses templates
 template <typename T>
-void writeToFile(char *filename, T** arr, int row, int col)
+void writeToFile(char *filename, char *varName, T** arr, int row, int col)
 {
   ofstream fout(filename);
+	fout<<varName<<"=[";
   for(int i = 0; i<row; i++) {
     for(int j=0; j<col; j++) {
       fout<<arr[i][j]<<' ';
     }
-    fout<< ' ' << SEMI_COLON_CHAR << ' ' <<endl;
+    if(i!=row-1)
+	    fout<< ' ' << SEMI_COLON_CHAR << ' ' <<endl;
   }
+	fout<<"];";
   fout.flush();
   fout.close();
 }
@@ -137,10 +141,43 @@ float** rotation_matrix(float angle)
   return rotation;
 }
   
-// Sweep the ellipse
 void sweep()
 {
+
+  float step = 360.0f / number_sweep_steps;
+  float angle = 0;
+	int curPosition = 0;
+	float **rot;
+	number_torus_points = number_sweep_steps * number_ellipse_points;
+	h_torus_vertex = new float*[number_torus_points];
   
+  for(int i = 0; i<number_sweep_steps; i++) {
+		cout<<"Angle: "<<angle<<endl;
+		rot = rotation_matrix(angle);
+    for(int j = 0; j<number_ellipse_points; j++) {
+		  float **point = new float*[4];
+			point[0] = new float[1];
+			point[1] = new float[1];
+			point[2] = new float[1];
+			point[3] = new float[1];
+			point[0][0] = h_ellipse_vertex[j][0];
+			point[1][0] = h_ellipse_vertex[j][1];
+			point[2][0] = h_ellipse_vertex[j][2];
+			point[3][0] = h_ellipse_vertex[j][3];
+
+			// Rotate the point
+			float **newPoint = matrix_mul(rot, point, 4, 4, 4, 1);
+
+			h_torus_vertex[curPosition] = new float[4];
+			h_torus_vertex[curPosition][0] = newPoint[0][0];
+			h_torus_vertex[curPosition][1] = newPoint[1][0];
+			h_torus_vertex[curPosition][2] = newPoint[2][0];
+			h_torus_vertex[curPosition][3] = newPoint[3][0];
+			curPosition++;
+			
+    }
+		angle += step;
+  }
 }
 
 ////////////////////////////////
@@ -152,7 +189,6 @@ int**  generateSurfaceTable()
   //assumming matrixes are: arr[ellipse_number][x y z 1]
  
   // we need a surface for every point in the torus
-  int number_torus_points = number_sweep_steps * number_ellipse_points;
   int** surface_table = new int * [number_torus_points];
   
   //init array
@@ -221,34 +257,14 @@ int main(int argc, char** argv)
   cutilSafeCall(cudaGetDevice(&devID));
   cutilSafeCall(cudaGetDeviceProperties(&props, devID));
 
-  cout<<"Start reading"<<endl;
-  float **h_ellipse_vertex = readFromFile("../ellipse_matrix.txt");
+  h_ellipse_vertex = readFromFile("../ellipse_matrix.txt");
 
-  float ** arr1 = new float*[1];
-  arr1[0] = new float[1];
-  arr1[1] = new float[1];
-  arr1[2] = new float[1];
-  arr1[3] = new float[1];
+	sweep();
 
-  arr1[0][0] = 1;
-  arr1[1][0] = 2;
-  arr1[2][0] = 3;
-  arr1[3][0] = 1;
+	h_torus_surface = generateSurfaceTable();
 
-
-  float ** arr2 = new float*[2];
-  arr2[0] = new float[2];
-  arr2[1] = new float[2];
-
-  arr2[0][0] = 4;
-  arr2[0][1] = 3;
-  arr2[1][0] = 2;
-  arr2[1][1] = 1;
-
-  float ** ry = rotation_matrix(45);
-  float ** arr3 = matrix_mul(ry, arr1, 4, 4, 4, 1);
-
-  writeToConsole(arr3, 4, 1);
+  writeToFile("vertex_table.txt", "vTable", h_torus_vertex, number_torus_points, 4);
+  writeToFile("surface_table.txt", "faces", h_torus_surface, number_torus_points, 4);
 
   //
   // INIT DATA HERE
@@ -257,7 +273,7 @@ int main(int argc, char** argv)
   // print information
   cout << "Number of ellipse vertices : " << number_ellipse_points << endl;
   cout << "Number of rotational sweep steps : " << number_sweep_steps << endl;
-  cout << "Rotational sweep origin : " << "[" << sweep_origin[0] << ", " << sweep_origin[1] << ", " << sweep_origin[2] << "]" << endl;
+  //cout << "Rotational sweep origin : " << "[" << sweep_origin[0] << ", " << sweep_origin[1] << ", " << sweep_origin[2] << "]" << endl;
   
   // create a timer
   unsigned int timer = 0;
