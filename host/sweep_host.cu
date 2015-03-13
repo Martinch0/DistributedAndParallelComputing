@@ -9,6 +9,8 @@
 #include <vector>
 using namespace std;
 
+ #define PI 3.14159265
+
 float** h_ellipse_vertex;
 float* h_torus_vertex;
 float* h_torus_surface;
@@ -51,11 +53,11 @@ float** readFromFile(char *filename)
 ///////////////////
 // Uses templates
 template <typename T>
-void writeToFile(char *filename, T** arr, int x, int y)
+void writeToFile(char *filename, T** arr, int row, int col)
 {
   ofstream fout(filename);
-  for(int i = 0; i<x; i++) {
-    for(int j=0; j<y; j++) {
+  for(int i = 0; i<row; i++) {
+    for(int j=0; j<col; j++) {
       fout<<arr[i][j]<<' ';
     }
     fout<< ' ' << SEMI_COLON_CHAR << ' ' <<endl;
@@ -69,9 +71,9 @@ void writeToFile(char *filename, T** arr, int x, int y)
 //////////////////////
 // Uses templates
 template <typename T>
-void writeToConsole(T** arr, int x, int y) {
-  for(int i = 0; i<x; i++) {
-    for(int j=0; j<y; j++) {
+void writeToConsole(T** arr, int row, int col) {
+  for(int i = 0; i<row; i++) {
+    for(int j=0; j<col; j++) {
       cout<<arr[i][j]<<' ';
     }
     cout<< ' ' << SEMI_COLON_CHAR << ' ' <<endl;
@@ -82,20 +84,20 @@ void writeToConsole(T** arr, int x, int y) {
 // Matrix multiplication //
 ///////////////////////////
 // X is the number of ROWS, Y is the number of COLS.
-float** matrix_mul(float **a, float **b, int ax, int ay, int bx, int by)
+float** matrix_mul(float **a, float **b, int arows, int acols, int brows, int bcols)
 {
-  float** result = new float * [ax];
+  float** result = new float * [acols];
   //init array
-  for(int i=0; i < ax; i++) {
-    result[i] = new float[by];
+  for(int i=0; i < acols; i++) {
+    result[i] = new float[brows];
   }
   //for every row in the result
-  for(int i=0; i < ax; i++) {
+  for(int i=0; i < acols; i++) {
     //for every column in the result
-    for(int j=0; j < by; j++) {
+    for(int j=0; j < brows; j++) {
       float sum = 0;
       //find the sum of the multiplied row and column
-      for(int k=0; k < ay; k++) {
+      for(int k=0; k < acols; k++) {
         sum += a[i][k] * b[k][j];
       }
       result[i][j] = sum;
@@ -107,23 +109,30 @@ float** matrix_mul(float **a, float **b, int ax, int ay, int bx, int by)
 ////////////////////////////////////
 // Rotation Transformation Matrix //
 ////////////////////////////////////
-float** rotation_matrix(int angle)
+float** rotation_matrix(float angle)
 {
+  float angle_rad = PI * angle / 180.0;
+
   float** rotation = new float*[4];
   rotation[0] = new float[4];
-  rotation[0][0] = cos(angle);
+  rotation[0][0] = cos(angle_rad);
   rotation[0][1] = 0;
-  rotation[0][2] = sin(angle);
+  rotation[0][2] = sin(angle_rad);
   rotation[0][3] = 0;
   rotation[1] = new float[4];
-  rotation[1][0] = rotation[1][2] = rotation[1][3] = 0;
+  rotation[1][0] = 0;
   rotation[1][1] = 1;
+  rotation[1][2] = 0;
+  rotation[1][3] = 0;
   rotation[2] = new float[4];
-  rotation[2][0] = -sin(angle);
-  rotation[2][1] = rotation[2][3] = 0;
-  rotation[2][2] = cos(angle);
+  rotation[2][0] = -sin(angle_rad);
+  rotation[2][1] = 0;
+  rotation[2][2] = cos(angle_rad);
+  rotation[2][3] = 0;
   rotation[3] = new float[4];
-  rotation[3][0] = rotation[3][1] = rotation[3][2] = 0;
+  rotation[3][0] = 0;
+  rotation[3][1] = 0;
+  rotation[3][2] = 0;
   rotation[3][3] = 1;
   return rotation;
 }
@@ -215,14 +224,16 @@ int main(int argc, char** argv)
   cout<<"Start reading"<<endl;
   float **h_ellipse_vertex = readFromFile("../ellipse_matrix.txt");
 
-  float ** arr1 = new float*[2];
-  arr1[0] = new float[2];
-  arr1[1] = new float[2];
+  float ** arr1 = new float*[1];
+  arr1[0] = new float[1];
+  arr1[1] = new float[1];
+  arr1[2] = new float[1];
+  arr1[3] = new float[1];
 
   arr1[0][0] = 1;
-  arr1[0][1] = 2;
-  arr1[1][0] = 3;
-  arr1[1][1] = 4;
+  arr1[1][0] = 2;
+  arr1[2][0] = 3;
+  arr1[3][0] = 1;
 
 
   float ** arr2 = new float*[2];
@@ -234,10 +245,10 @@ int main(int argc, char** argv)
   arr2[1][0] = 2;
   arr2[1][1] = 1;
 
+  float ** ry = rotation_matrix(45);
+  float ** arr3 = matrix_mul(ry, arr1, 4, 4, 4, 1);
 
-  float ** arr3 = matrix_mul(arr2, arr1, 2, 2, 2, 2);
-
-  writeToConsole(arr3, 2, 2);
+  writeToConsole(arr3, 4, 1);
 
   //
   // INIT DATA HERE
@@ -273,3 +284,4 @@ int main(int argc, char** argv)
 
   return 0;
 }
+
