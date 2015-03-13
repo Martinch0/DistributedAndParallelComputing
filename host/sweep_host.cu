@@ -16,7 +16,7 @@ float** h_torus_vertex;
 int** h_torus_surface;
 float* sweep_origin;
 
-int number_sweep_steps = 10;
+int number_sweep_steps = 100;
 int number_ellipse_points;
 int number_torus_points;
 
@@ -152,7 +152,6 @@ void sweep()
 	h_torus_vertex = new float*[number_torus_points];
   
   for(int i = 0; i<number_sweep_steps; i++) {
-		cout<<"Angle: "<<angle<<endl;
 		rot = rotation_matrix(angle);
     for(int j = 0; j<number_ellipse_points; j++) {
 		  float **point = new float*[4];
@@ -230,8 +229,8 @@ int**  generateSurfaceTable()
         if (torus_point % number_ellipse_points == 0) {
           //create surface square joining the last 2 points of the torus with the first two
           surface_table[torus_point-1][0] = torus_point;
-          surface_table[torus_point-1][1] = 0;
-          surface_table[torus_point-1][2] = 1;
+          surface_table[torus_point-1][1] = 1;
+          surface_table[torus_point-1][2] = 2;
           surface_table[torus_point-1][3] = torus_point + 1 - number_ellipse_points;
         } else {
           //create surface square
@@ -263,8 +262,8 @@ int main(int argc, char** argv)
 
 	h_torus_surface = generateSurfaceTable();
 
-  writeToFile("vertex_table.txt", "vTable", h_torus_vertex, number_torus_points, 4);
-  writeToFile("surface_table.txt", "faces", h_torus_surface, number_torus_points, 4);
+  writeToFile("vertex_table.m", "vTable", h_torus_vertex, number_torus_points, 4);
+  writeToFile("surface_table.m", "faces", h_torus_surface, number_torus_points, 4);
 
   //
   // INIT DATA HERE
