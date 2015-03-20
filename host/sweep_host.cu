@@ -110,10 +110,41 @@ float** matrix_mul(float **a, float **b, int arows, int acols, int brows, int bc
   return result;
 }
 
-////////////////////////////////////
-// Rotation Transformation Matrix //
-////////////////////////////////////
-float** rotation_matrix(float angle)
+/////////////////////////////////////////
+// Rotation Transformation Matrix on X //
+/////////////////////////////////////////
+float** rotmat_Y(float angle)
+{
+  float angle_rad = PI * angle / 180.0;
+
+  float** rotation = new float*[4];
+  rotation[0] = new float[4];
+  rotation[0][0] = 1
+  rotation[0][1] = 0;
+  rotation[0][2] = 0;
+  rotation[0][3] = 0;
+  rotation[1] = new float[4];
+  rotation[1][0] = 0;
+  rotation[1][1] = cos(angle_rad);
+  rotation[1][2] = -sin(angle_rad);
+  rotation[1][3] = 0;
+  rotation[2] = new float[4];
+  rotation[2][0] = 0;
+  rotation[2][1] = sin(angle_rad);
+  rotation[2][2] = cos(angle_rad);
+  rotation[2][3] = 0;
+  rotation[3] = new float[4];
+  rotation[3][0] = 0;
+  rotation[3][1] = 0;
+  rotation[3][2] = 0;
+  rotation[3][3] = 1;
+  return rotation;
+}
+
+/////////////////////////////////////////
+// Rotation Transformation Matrix on Y //
+/////////////////////////////////////////
+float** rotmat_Y(float angle)
 {
   float angle_rad = PI * angle / 180.0;
 
@@ -140,6 +171,38 @@ float** rotation_matrix(float angle)
   rotation[3][3] = 1;
   return rotation;
 }
+
+/////////////////////////////////////////
+// Rotation Transformation Matrix on Z //
+/////////////////////////////////////////
+float** rotmat_Y(float angle)
+{
+  float angle_rad = PI * angle / 180.0;
+
+  float** rotation = new float*[4];
+  rotation[0] = new float[4];
+  rotation[0][0] = cos(angle_rad);
+  rotation[0][1] = -sin(angle_rad);
+  rotation[0][2] = 0;
+  rotation[0][3] = 0;
+  rotation[1] = new float[4];
+  rotation[1][0] = 0;
+  rotation[1][1] = 1;
+  rotation[1][2] = 0;
+  rotation[1][3] = 0;
+  rotation[2] = new float[4];
+  rotation[2][0] = sin(angle_rad);
+  rotation[2][1] = cos(angle_rad);
+  rotation[2][2] = 0;
+  rotation[2][3] = 0;
+  rotation[3] = new float[4];
+  rotation[3][0] = 0;
+  rotation[3][1] = 0;
+  rotation[3][2] = 0;
+  rotation[3][3] = 1;
+  return rotation;
+}
+
   
 void sweep()
 {
@@ -152,7 +215,7 @@ void sweep()
 	h_torus_vertex = new float*[number_torus_points];
   
   for(int i = 0; i<number_sweep_steps; i++) {
-		rot = rotation_matrix(angle);
+		rot = rotmat_Y(angle);
     for(int j = 0; j<number_ellipse_points; j++) {
 		  float **point = new float*[4];
 			point[0] = new float[1];
