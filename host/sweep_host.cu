@@ -195,14 +195,14 @@ float** rotmat_Z(float angle)
   rotation[0][2] = 0;
   rotation[0][3] = 0;
   rotation[1] = new float[4];
-  rotation[1][0] = 0;
-  rotation[1][1] = 1;
+  rotation[1][0] = sin(angle_rad);
+  rotation[1][1] = cos(angle_rad);
   rotation[1][2] = 0;
   rotation[1][3] = 0;
   rotation[2] = new float[4];
-  rotation[2][0] = sin(angle_rad);
-  rotation[2][1] = cos(angle_rad);
-  rotation[2][2] = 0;
+  rotation[2][0] = 0;
+  rotation[2][1] = 0;
+  rotation[2][2] = 1;
   rotation[2][3] = 0;
   rotation[3] = new float[4];
   rotation[3][0] = 0;
@@ -220,17 +220,17 @@ void sweep()
   float angle = 0;
 	int curPosition = 0;
 	float **rot;
+	float **point = new float*[4];
+	point[0] = new float[1];
+	point[1] = new float[1];
+	point[2] = new float[1];
+	point[3] = new float[1];
 	number_torus_points = number_sweep_steps * number_ellipse_points;
 	h_torus_vertex = new float*[number_torus_points];
   
   for(int i = 0; i<number_sweep_steps; i++) {
 		rot = rotmat_Y(angle);
     for(int j = 0; j<number_ellipse_points; j++) {
-		  float **point = new float*[4];
-			point[0] = new float[1];
-			point[1] = new float[1];
-			point[2] = new float[1];
-			point[3] = new float[1];
 			point[0][0] = h_ellipse_vertex[j][0];
 			point[1][0] = h_ellipse_vertex[j][1];
 			point[2][0] = h_ellipse_vertex[j][2];
@@ -244,11 +244,18 @@ void sweep()
 			h_torus_vertex[curPosition][1] = newPoint[1][0];
 			h_torus_vertex[curPosition][2] = newPoint[2][0];
 			h_torus_vertex[curPosition][3] = newPoint[3][0];
+			delete newPoint;
 			curPosition++;
 			
     }
 		angle += step;
+		delete rot;
   }
+	delete point[0];
+	delete point[1];
+	delete point[2];
+	delete point[3];
+	delete point;
 }
 
 ////////////////////////////////
@@ -318,6 +325,61 @@ int**  generateSurfaceTable()
   return surface_table;
 }
 
+void rotateTorus() {
+	float** rotmatX = rotmat_X(5);
+	float** rotmatZ = rotmat_Z(10);
+	float** point = new float*[4];
+	point[0] = new float[1];
+	point[1] = new float[1];
+	point[2] = new float[1];
+	point[3] = new float[1];
+
+	for (int i = 0; i < number_torus_points; i++) {
+		point[0][0] = h_torus_vertex[i][0];
+		point[1][0] = h_torus_vertex[i][1];
+		point[2][0] = h_torus_vertex[i][2];
+		point[3][0] = h_torus_vertex[i][3];
+
+		float** newPoint = matrix_mul(rotmatX, point, 4, 4, 4, 1);
+		float** newerPoint = matrix_mul(rotmatZ, newPoint, 4, 4, 4, 1);
+
+		h_torus_vertex[i][0] = newerPoint[0][0];
+		h_torus_vertex[i][1] = newerPoint[1][0];
+		h_torus_vertex[i][2] = newerPoint[2][0];
+		h_torus_vertex[i][3] = newerPoint[3][0];
+
+		delete[] newPoint[0];
+		delete[] newPoint[1];
+		delete[] newPoint[2];
+		delete[] newPoint[3];
+		delete[] newPoint;
+
+		delete[] newerPoint[0];
+		delete[] newerPoint[1];
+		delete[] newerPoint[2];
+		delete[] newerPoint[3];
+		delete[] newerPoint;
+	}
+
+	delete[] rotmatX[0];
+	delete[] rotmatX[1];
+	delete[] rotmatX[2];
+	delete[] rotmatX[3];
+	delete[] rotmatX;
+
+	delete[] rotmatZ[0];
+	delete[] rotmatZ[1];
+	delete[] rotmatZ[2];
+	delete[] rotmatZ[3];
+	delete[] rotmatZ;
+
+	delete[] point[0];
+	delete[] point[1];
+	delete[] point[2];
+	delete[] point[3];
+	delete[] point;
+}
+
 /////////////////////////
 /////// GL CODE /////////
 /////////////////////////
@@ -340,9 +402,11 @@ void drawBox()
 
 void display()
 {
+	rotateTorus();
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   drawBox();
   glutSwapBuffers();
+	glutPostRedisplay();
 }
 
 void init()
@@ -359,17 +423,13 @@ void init()
   /* Setup the view of the cube. */
   glMatrixMode(GL_PROJECTION);
   gluPerspective( /* field of view in degree */ 40.0,
-   /* aspect ratio */ 1.0,
-    /* Z near */ 1.0, /* Z far */ 100000.0);
-glMatrixMode(GL_MODELVIEW);
-  gluLookAt(2000.0, 2000.0, 0.0,  /* eye is at (0,0,5) */
+  	/* aspect ratio */ 1.0,
+  	/* Z near */ 1.0, /* Z far */ 100000.0);
+	glMatrixMode(GL_MODELVIEW);
+  gluLookAt(0.0, 2000.0, 0.0,  /* eye is at (0,0,5) */
     0.0, 0.0, 0.0,      /* center is at (0,0,0) */
     0.0, 0.0, 1.0);      /* up is in positive Y direction */
 
-  /* Adjust cube position to be asthetic angle. */
-  glTranslatef(0.0, 0.0, -1.0);
-  glRotatef(60, 1.0, 0.0, 0.0);
-  glRotatef(-20, 0.0, 0.0, 1.0);
 }
 
 void displayTorus(int argc, char **argv)
@@ -386,6 +446,7 @@ void displayTorus(int argc, char **argv)
 /////////////////////////
 //// END GL CODE ////////
 /////////////////////////
+
 
 int main(int argc, char** argv)
 {
