@@ -321,9 +321,20 @@ int main(int argc, char** argv)
 
   h_ellipse_vertex = readFromFile("../ellipse_matrix.txt");
 
+	unsigned int timer = 0;
+  cutilCheckError(cutCreateTimer(&timer));             // create a timer
+  cutilCheckError(cutStartTimer(timer));               // start the timer
+
 	sweep();
 
 	h_torus_surface = generateSurfaceTable();
+
+
+	cutilCheckError(cutStopTimer(timer));
+	double dSeconds = cutGetTimerValue(timer)/(1000.0);
+
+	//Log througput
+	printf("Seconds: %.4f \n", dSeconds);
 
   writeToFile("vertex_table.m", "vTable", h_torus_vertex, number_torus_points, 4);
   writeToFile("surface_table.m", "faces", h_torus_surface, number_torus_points, 4);
@@ -336,18 +347,6 @@ int main(int argc, char** argv)
   cout << "Number of ellipse vertices : " << number_ellipse_points << endl;
   cout << "Number of rotational sweep steps : " << number_sweep_steps << endl;
   //cout << "Rotational sweep origin : " << "[" << sweep_origin[0] << ", " << sweep_origin[1] << ", " << sweep_origin[2] << "]" << endl;
-  
-  // create a timer
-  unsigned int timer = 0;
-  cutilCheckError(cutCreateTimer(&timer));
-  // start the timer
-  cutilCheckError(cutStartTimer(timer));
-
-  //
-  //
-  // DO STUFF HERE
-  //
-  //
 
   // check if kernel execution generated and error
   cutilCheckMsg("Kernel execution failed");
