@@ -7,6 +7,15 @@
 #include <algorithm>
 #include <cstdlib>
 #include <vector>
+
+// OpenGL Graphics includes
+#include <GL/glew.h>
+#if defined (__APPLE__) || defined(MACOSX)
+#include <GLUT/glut.h>
+#else
+#include <GL/freeglut.h>
+#endif
+
 using namespace std;
 
  #define PI 3.14159265
@@ -113,13 +122,13 @@ float** matrix_mul(float **a, float **b, int arows, int acols, int brows, int bc
 /////////////////////////////////////////
 // Rotation Transformation Matrix on X //
 /////////////////////////////////////////
-float** rotmat_Y(float angle)
+float** rotmat_X(float angle)
 {
   float angle_rad = PI * angle / 180.0;
 
   float** rotation = new float*[4];
   rotation[0] = new float[4];
-  rotation[0][0] = 1
+  rotation[0][0] = 1;
   rotation[0][1] = 0;
   rotation[0][2] = 0;
   rotation[0][3] = 0;
@@ -175,7 +184,7 @@ float** rotmat_Y(float angle)
 /////////////////////////////////////////
 // Rotation Transformation Matrix on Z //
 /////////////////////////////////////////
-float** rotmat_Y(float angle)
+float** rotmat_Z(float angle)
 {
   float angle_rad = PI * angle / 180.0;
 
@@ -309,6 +318,75 @@ int**  generateSurfaceTable()
   return surface_table;
 }
 
+/////////////////////////
+/////// GL CODE /////////
+/////////////////////////
+GLfloat light_diffuse[] = {1.0, 0.0, 0.0, 1.0};  /* Red diffuse light. */
+GLfloat light_position[] = {1.0, 1.0, 1.0, 0.0};  /* Infinite light location. */
+float normal[3] = {0.0f, 1.0f, 0.0f};
+
+void drawBox()
+{
+  for (int i = 0; i < number_torus_points; i++) {
+    glBegin(GL_QUADS);
+    glNormal3fv(&normal[0]);
+    glVertex3fv(&h_torus_vertex[h_torus_surface[i][0]-1][0]);
+    glVertex3fv(&h_torus_vertex[h_torus_surface[i][1]-1][0]);
+    glVertex3fv(&h_torus_vertex[h_torus_surface[i][2]-1][0]);
+    glVertex3fv(&h_torus_vertex[h_torus_surface[i][3]-1][0]);
+    glEnd();
+  }
+}
+
+void display()
+{
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  drawBox();
+  glutSwapBuffers();
+}
+
+void init()
+{
+  /* Enable a single OpenGL light. */
+  glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
+  glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+  glEnable(GL_LIGHT0);
+  glEnable(GL_LIGHTING);
+
+  /* Use depth buffering for hidden surface elimination. */
+  glEnableClientState(GL_DEPTH_TEST);
+
+  /* Setup the view of the cube. */
+  glMatrixMode(GL_PROJECTION);
+  gluPerspective( /* field of view in degree */ 40.0,
+   /* aspect ratio */ 1.0,
+    /* Z near */ 1.0, /* Z far */ 100000.0);
+glMatrixMode(GL_MODELVIEW);
+  gluLookAt(2000.0, 2000.0, 0.0,  /* eye is at (0,0,5) */
+    0.0, 0.0, 0.0,      /* center is at (0,0,0) */
+    0.0, 0.0, 1.0);      /* up is in positive Y direction */
+
+  /* Adjust cube position to be asthetic angle. */
+  glTranslatef(0.0, 0.0, -1.0);
+  glRotatef(60, 1.0, 0.0, 0.0);
+  glRotatef(-20, 0.0, 0.0, 1.0);
+}
+
+void displayTorus(int argc, char **argv)
+{
+	glewInit();
+	glutInit(&argc, argv);
+  glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
+  glutCreateWindow("Torus");
+  glutDisplayFunc(display);
+  init();
+  glutMainLoop();
+}
+
+/////////////////////////
+//// END GL CODE ////////
+/////////////////////////
+
 int main(int argc, char** argv)
 {
   //CUDA properties
@@ -332,6 +410,8 @@ int main(int argc, char** argv)
 
 	cutilCheckError(cutStopTimer(timer));
 	double dSeconds = cutGetTimerValue(timer)/(1000.0);
+
+	displayTorus(argc, argv);
 
 	//Log througput
 	printf("Seconds: %.4f \n", dSeconds);

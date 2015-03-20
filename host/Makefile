@@ -20,10 +20,6 @@ CCFILES		:=
 ################################################################################
 # Rules and targets
 
-ROOTDIR = /bham/pd/packages/SL6/x86_64/cuda-4.0.17-sdk/C/common
-BINDIR  = ./bin
-include $(ROOTDIR)/common.mk
-
 # flag to enable double precision
 # NVCCFLAGS += -arch sm_13
 
@@ -36,3 +32,11 @@ include $(ROOTDIR)/common.mk
 # flag to report on use of registers, shared memory, etc
 NVCCFLAGS += -Xptxas -v
 
+# Additional compiler flags and LIBs to include
+USEGLLIB             := 1
+USEGLUT	             := 1
+USERENDERCHECKGL     := 1
+
+ROOTDIR = /bham/pd/packages/SL6/x86_64/cuda-4.0.17-sdk/C/common
+BINDIR  = ./bin
+include $(ROOTDIR)/common.mk
