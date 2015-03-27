@@ -1,5 +1,3 @@
-/// COMMENT
-
 #include "cutil_inline.h"
 #include <iostream>
 #include <fstream>
@@ -22,21 +20,20 @@ using namespace std;
 
 #define PI 3.14159265
 
-CustomMatrix<float>* h_ellipse_vertex;
-CustomMatrix<float>* h_ellipse_normals;
+CustomMatrix<float>* h_ellipse_vertex; // The points of the initial ellipse.
+CustomMatrix<float>* h_ellipse_normals; // The normals of the initial ellipse.
 
-CustomMatrix<float>* h_torus_vertex;
-CustomMatrix<float>* h_torus_normals;
-CustomMatrix<int>* h_torus_surface;
+CustomMatrix<float>* h_torus_vertex;  // The points of the generated torus.
+CustomMatrix<float>* h_torus_normals; // The normals of the generated torus.
+CustomMatrix<int>* h_torus_surface; // The surface table of the generated torus.
 
 int number_sweep_steps = 1000;
 int number_ellipse_points;
 int number_torus_points;
-int torus_rotation[] = {1, 0, 2};
+int torus_rotation[] = {1, 0, 2}; // The X, Y and Z rotation of the torus in degrees, performed each frame.
 
 int nbFrames = 0;
 double lastTime = 0;
-
 
 char SEMI_COLON_CHAR = 59;
 
@@ -355,6 +352,7 @@ void rotateTorus() {
   CustomMatrix<float> point(4,1);
   CustomMatrix<float> normal(4,1);
 
+  // Rotate each point
   for (int i = 0; i < number_torus_points; i++) {
     point.matrix[0][0] = h_torus_vertex->matrix[i][0];
     point.matrix[1][0] = h_torus_vertex->matrix[i][1];
@@ -394,13 +392,14 @@ void rotateTorus() {
 /////////////////////////
 GLfloat light_diffuse[] = {1.0, 0.0, 0.0, 0.1};  /* Red diffuse light. */
 GLfloat light_position[] = {0.0, 500.0, 1.0, 0.0};  /* Infinite light location. */
-GLfloat light_ambient[] = { 0.5, 0.0, 0.0, 1.0 };
+GLfloat light_ambient[] = { 0.5, 0.0, 0.0, 1.0 }; /* Ambient light. */
 
-void drawBox()
+// Draws the torus
+void drawTorus()
 {
-
   GLfloat * normal = new GLfloat[4];
 
+  // Draw every surface
   for (int i = 0; i < number_torus_points; i++) {
     glBegin(GL_QUADS);
 
@@ -419,15 +418,15 @@ void drawBox()
   delete[] normal;
 }
 
+// Update the display window. Called every frame.
 void display()
 {
   double currentTime = glutGet(GLUT_ELAPSED_TIME);
-  cout<<currentTime<<endl;
   nbFrames++;
   if ( currentTime - lastTime >= 1000 ){ // If last prinf() was more than 1 sec ago
     // printf and reset timer
     char buffer[16];
-    snprintf(buffer, 16, "FPS: %d", nbFrames);
+    snprintf(buffer, 16, "Host Torus - FPS: %d", nbFrames);
 
     glutSetWindowTitle(buffer);
     nbFrames = 0;
@@ -435,11 +434,12 @@ void display()
   }
   rotateTorus();
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  drawBox();
+  drawTorus();
   glutSwapBuffers();
   glutPostRedisplay();
 }
 
+// Initialize the OpenGL
 void init()
 {
   /* Enable a single OpenGL light. */
@@ -468,6 +468,7 @@ void init()
 
 }
 
+// Initialize the display window
 void displayTorus(int argc, char **argv)
 {
   glewInit();
@@ -489,56 +490,15 @@ void displayTorus(int argc, char **argv)
 ////////////
 int main(int argc, char** argv)
 {
-  //CUDA properties
-  int devID;
-  cudaDeviceProp props;
-  
-  // get number of SMs on this GPU
-  cutilSafeCall(cudaGetDevice(&devID));
-  cutilSafeCall(cudaGetDeviceProperties(&props, devID));
-
   h_ellipse_vertex = readFromFile("../ellipse_matrix.txt");
   h_ellipse_normals = readFromFile("../ellipse_normals.txt");
-
-  unsigned int timer = 0;
-  cutilCheckError(cutCreateTimer(&timer));             // create a timer
-  cutilCheckError(cutStartTimer(timer));               // start the timer
 
   sweep();
 
   generateSurfaceTable();
 
-
-  cutilCheckError(cutStopTimer(timer));
-  double dSeconds = cutGetTimerValue(timer)/(1000.0);
-
   displayTorus(argc, argv);
-
-  //Log througput
-  printf("Seconds: %.4f \n", dSeconds);
-
-  //writeToFile("vertex_table.m", "vTable", h_torus_vertex->matrix, number_torus_points, 4);
-  //writeToFile("surface_table.m", "faces", h_torus_surface->matrix, number_torus_points, 4);
-
-  //
-  // INIT DATA HERE
-  //
   
-  // print information
-  cout << "Number of ellipse vertices : " << number_ellipse_points << endl;
-  cout << "Number of rotational sweep steps : " << number_sweep_steps << endl;
-
-  // check if kernel execution generated and error
-  cutilCheckMsg("Kernel execution failed");
-
-  // wait for device to finish
-  cudaThreadSynchronize();
-
-  cutilCheckError(cutStopTimer(timer));
-
-  // exit and clean up device status
-  cudaThreadExit();
-
   return 0;
 }
 
