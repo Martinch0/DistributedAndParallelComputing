@@ -7,6 +7,8 @@
 #include <algorithm>
 #include <cstdlib>
 #include <vector>
+#include <cstdlib>
+#include "custom_matrix.cpp"
 
 // OpenGL Graphics includes
 #include <GL/glew.h>
@@ -18,20 +20,23 @@
 
 using namespace std;
 
- #define PI 3.14159265
+#define PI 3.14159265
 
-float** h_ellipse_vertex;
-float** h_ellipse_normals;
+CustomMatrix<float>* h_ellipse_vertex;
+CustomMatrix<float>* h_ellipse_normals;
 
-float** h_torus_vertex;
-float** h_torus_normals;
-int** h_torus_surface;
+CustomMatrix<float>* h_torus_vertex;
+CustomMatrix<float>* h_torus_normals;
+CustomMatrix<int>* h_torus_surface;
 
-float* sweep_origin; //TODO not sure if we are using this.
-
-int number_sweep_steps = 100;
+int number_sweep_steps = 1000;
 int number_ellipse_points;
 int number_torus_points;
+int torus_rotation[] = {1, 0, 2};
+
+int nbFrames = 0;
+double lastTime = 0;
+
 
 char SEMI_COLON_CHAR = 59;
 
@@ -48,16 +53,15 @@ int countLines(char *filename) {
 ////////////////////
 // Read from file //
 ////////////////////
-float** readFromFile(char *filename)
+CustomMatrix<float>* readFromFile(char *filename)
 {
   ifstream fin(filename);
   int len = countLines(filename);
   number_ellipse_points = len;
-  float **arr = new float*[len];
+  CustomMatrix<float>* arr = new CustomMatrix<float>(len, 4);
   for(int i=0; i<len; i++) {
-    arr[i] = new float[4];
-    fin>>arr[i][0]>>arr[i][1]>>arr[i][2];
-    arr[i][3] = 1.0f;
+    fin>>arr->matrix[i][0]>>arr->matrix[i][1]>>arr->matrix[i][2];
+    arr->matrix[i][3] = 1.0f;
   }
   return arr;
 }
@@ -101,13 +105,8 @@ void writeToConsole(T** arr, int row, int col) {
 // Matrix multiplication //
 ///////////////////////////
 // X is the number of ROWS, Y is the number of COLS.
-float** matrix_mul(float **a, float **b, int arows, int acols, int brows, int bcols)
+void matrix_mul(CustomMatrix<float>* a, CustomMatrix<float>* b, int arows, int acols, int brows, int bcols, CustomMatrix<float>* out)
 {
-  float** result = new float * [acols];
-  //init array
-  for(int i=0; i < acols; i++) {
-    result[i] = new float[brows];
-  }
   //for every row in the result
   for(int i=0; i < acols; i++) {
     //for every column in the result
@@ -115,104 +114,115 @@ float** matrix_mul(float **a, float **b, int arows, int acols, int brows, int bc
       float sum = 0;
       //find the sum of the multiplied row and column
       for(int k=0; k < acols; k++) {
-        sum += a[i][k] * b[k][j];
+        sum += a->matrix[i][k] * b->matrix[k][j];
       }
-      result[i][j] = sum;
+      out->matrix[i][j] = sum;
     }
   }
-  return result;
 }
 
 /////////////////////////////////////////
 // Rotation Transformation Matrix on X //
 /////////////////////////////////////////
-float** rotmat_X(float angle)
+CustomMatrix<float>* rotmat_X(float angle)
 {
   float angle_rad = PI * angle / 180.0;
 
-  float** rotation = new float*[4];
-  rotation[0] = new float[4];
-  rotation[0][0] = 1;
-  rotation[0][1] = 0;
-  rotation[0][2] = 0;
-  rotation[0][3] = 0;
-  rotation[1] = new float[4];
-  rotation[1][0] = 0;
-  rotation[1][1] = cos(angle_rad);
-  rotation[1][2] = -sin(angle_rad);
-  rotation[1][3] = 0;
-  rotation[2] = new float[4];
-  rotation[2][0] = 0;
-  rotation[2][1] = sin(angle_rad);
-  rotation[2][2] = cos(angle_rad);
-  rotation[2][3] = 0;
-  rotation[3] = new float[4];
-  rotation[3][0] = 0;
-  rotation[3][1] = 0;
-  rotation[3][2] = 0;
-  rotation[3][3] = 1;
+  CustomMatrix<float>* rotation = new CustomMatrix<float>(4,4);
+
+  //First row.
+  rotation->matrix[0][0] = 1;
+  rotation->matrix[0][1] = 0;
+  rotation->matrix[0][2] = 0;
+  rotation->matrix[0][3] = 0;
+
+  //Second row.
+  rotation->matrix[1][0] = 0;
+  rotation->matrix[1][1] = cos(angle_rad);
+  rotation->matrix[1][2] = -sin(angle_rad);
+  rotation->matrix[1][3] = 0;
+
+  //Third row.
+  rotation->matrix[2][0] = 0;
+  rotation->matrix[2][1] = sin(angle_rad);
+  rotation->matrix[2][2] = cos(angle_rad);
+  rotation->matrix[2][3] = 0;
+
+  //Fourth row.
+  rotation->matrix[3][0] = 0;
+  rotation->matrix[3][1] = 0;
+  rotation->matrix[3][2] = 0;
+  rotation->matrix[3][3] = 1;
   return rotation;
 }
 
 /////////////////////////////////////////
 // Rotation Transformation Matrix on Y //
 /////////////////////////////////////////
-float** rotmat_Y(float angle)
+CustomMatrix<float>* rotmat_Y(float angle)
 {
   float angle_rad = PI * angle / 180.0;
 
-  float** rotation = new float*[4];
-  rotation[0] = new float[4];
-  rotation[0][0] = cos(angle_rad);
-  rotation[0][1] = 0;
-  rotation[0][2] = sin(angle_rad);
-  rotation[0][3] = 0;
-  rotation[1] = new float[4];
-  rotation[1][0] = 0;
-  rotation[1][1] = 1;
-  rotation[1][2] = 0;
-  rotation[1][3] = 0;
-  rotation[2] = new float[4];
-  rotation[2][0] = -sin(angle_rad);
-  rotation[2][1] = 0;
-  rotation[2][2] = cos(angle_rad);
-  rotation[2][3] = 0;
-  rotation[3] = new float[4];
-  rotation[3][0] = 0;
-  rotation[3][1] = 0;
-  rotation[3][2] = 0;
-  rotation[3][3] = 1;
+  CustomMatrix<float>* rotation = new CustomMatrix<float>(4,4);
+
+  //First row.
+  rotation->matrix[0][0] = cos(angle_rad);
+  rotation->matrix[0][1] = 0;
+  rotation->matrix[0][2] = sin(angle_rad);
+  rotation->matrix[0][3] = 0;
+
+  //Second row.
+  rotation->matrix[1][0] = 0;
+  rotation->matrix[1][1] = 1;
+  rotation->matrix[1][2] = 0;
+  rotation->matrix[1][3] = 0;
+
+  //Third row.
+  rotation->matrix[2][0] = -sin(angle_rad);
+  rotation->matrix[2][1] = 0;
+  rotation->matrix[2][2] = cos(angle_rad);
+  rotation->matrix[2][3] = 0;
+
+  //Fourth row.
+  rotation->matrix[3][0] = 0;
+  rotation->matrix[3][1] = 0;
+  rotation->matrix[3][2] = 0;
+  rotation->matrix[3][3] = 1;
   return rotation;
 }
 
 /////////////////////////////////////////
 // Rotation Transformation Matrix on Z //
 /////////////////////////////////////////
-float** rotmat_Z(float angle)
+CustomMatrix<float>* rotmat_Z(float angle)
 {
   float angle_rad = PI * angle / 180.0;
 
-  float** rotation = new float*[4];
-  rotation[0] = new float[4];
-  rotation[0][0] = cos(angle_rad);
-  rotation[0][1] = -sin(angle_rad);
-  rotation[0][2] = 0;
-  rotation[0][3] = 0;
-  rotation[1] = new float[4];
-  rotation[1][0] = sin(angle_rad);
-  rotation[1][1] = cos(angle_rad);
-  rotation[1][2] = 0;
-  rotation[1][3] = 0;
-  rotation[2] = new float[4];
-  rotation[2][0] = 0;
-  rotation[2][1] = 0;
-  rotation[2][2] = 1;
-  rotation[2][3] = 0;
-  rotation[3] = new float[4];
-  rotation[3][0] = 0;
-  rotation[3][1] = 0;
-  rotation[3][2] = 0;
-  rotation[3][3] = 1;
+  CustomMatrix<float>* rotation = new CustomMatrix<float>(4,4);
+
+  //First row.
+  rotation->matrix[0][0] = cos(angle_rad);
+  rotation->matrix[0][1] = -sin(angle_rad);
+  rotation->matrix[0][2] = 0;
+  rotation->matrix[0][3] = 0;
+
+  //Second row.
+  rotation->matrix[1][0] = sin(angle_rad);
+  rotation->matrix[1][1] = cos(angle_rad);
+  rotation->matrix[1][2] = 0;
+  rotation->matrix[1][3] = 0;
+
+  //Third row.
+  rotation->matrix[2][0] = 0;
+  rotation->matrix[2][1] = 0;
+  rotation->matrix[2][2] = 1;
+  rotation->matrix[2][3] = 0;
+
+  //Fourth row.
+  rotation->matrix[3][0] = 0;
+  rotation->matrix[3][1] = 0;
+  rotation->matrix[3][2] = 0;
+  rotation->matrix[3][3] = 1;
   return rotation;
 }
 
@@ -225,23 +235,14 @@ void sweep()
   float step = 360.0f / number_sweep_steps;
   float angle = 0;
   int curPosition = 0;
-  float **rot;
 
-  float **point = new float*[4];
-  point[0] = new float[1];
-  point[1] = new float[1];
-  point[2] = new float[1];
-  point[3] = new float[1];
-
-  float **normal = new float*[4];
-  normal[0] = new float[1];
-  normal[1] = new float[1];
-  normal[2] = new float[1];
-  normal[3] = new float[1];
+  CustomMatrix<float>* rot;
+  CustomMatrix<float> point(4,1);
+  CustomMatrix<float> normal(4,1);
 
   number_torus_points = number_sweep_steps * number_ellipse_points;
-  h_torus_vertex = new float*[number_torus_points];//torus points
-  h_torus_normals = new float*[number_torus_points];//torus normals
+  h_torus_vertex = new CustomMatrix<float>(number_torus_points, 4);//torus points
+  h_torus_normals = new CustomMatrix<float>(number_torus_points, 4);//torus normals
   
   // for every sweep step
   for(int i = 0; i<number_sweep_steps; i++) {
@@ -249,69 +250,52 @@ void sweep()
 
     // for every ellipse point
     for(int j = 0; j<number_ellipse_points; j++) {
-      point[0][0] = h_ellipse_vertex[j][0];
-      point[1][0] = h_ellipse_vertex[j][1];
-      point[2][0] = h_ellipse_vertex[j][2];
-      point[3][0] = h_ellipse_vertex[j][3];
+      point.matrix[0][0] = h_ellipse_vertex->matrix[j][0];
+      point.matrix[1][0] = h_ellipse_vertex->matrix[j][1];
+      point.matrix[2][0] = h_ellipse_vertex->matrix[j][2];
+      point.matrix[3][0] = h_ellipse_vertex->matrix[j][3];
 
-      normal[0][0] = h_ellipse_normals[j][0];
-      normal[1][0] = h_ellipse_normals[j][1];
-      normal[2][0] = h_ellipse_normals[j][2];
-      normal[3][0] = h_ellipse_normals[j][3];
+      normal.matrix[0][0] = h_ellipse_normals->matrix[j][0];
+      normal.matrix[1][0] = h_ellipse_normals->matrix[j][1];
+      normal.matrix[2][0] = h_ellipse_normals->matrix[j][2];
+      normal.matrix[3][0] = h_ellipse_normals->matrix[j][3];
+
+
+      CustomMatrix<float> newPoint(4,1);
+      CustomMatrix<float> newNormal(4,1);
 
       // Rotate the point
-      float **newPoint = matrix_mul(rot, point, 4, 4, 4, 1);
-      float **newNormal = matrix_mul(rot, normal, 4, 4, 4, 1);
+      matrix_mul(rot, &point, 4, 4, 4, 1, &newPoint);
+      matrix_mul(rot, &normal, 4, 4, 4, 1, &newNormal);
 
-      h_torus_vertex[curPosition] = new float[4];
-      h_torus_vertex[curPosition][0] = newPoint[0][0];
-      h_torus_vertex[curPosition][1] = newPoint[1][0];
-      h_torus_vertex[curPosition][2] = newPoint[2][0];
-      h_torus_vertex[curPosition][3] = newPoint[3][0];
+      h_torus_vertex->matrix[curPosition][0] = newPoint.matrix[0][0];
+      h_torus_vertex->matrix[curPosition][1] = newPoint.matrix[1][0];
+      h_torus_vertex->matrix[curPosition][2] = newPoint.matrix[2][0];
+      h_torus_vertex->matrix[curPosition][3] = newPoint.matrix[3][0];
 
-      h_torus_normals[curPosition] = new float[4];
-      h_torus_normals[curPosition][0] = newNormal[0][0];
-      h_torus_normals[curPosition][1] = newNormal[1][0];
-      h_torus_normals[curPosition][2] = newNormal[2][0];
-      h_torus_normals[curPosition][3] = newNormal[3][0];
+      h_torus_normals->matrix[curPosition][0] = newNormal.matrix[0][0];
+      h_torus_normals->matrix[curPosition][1] = newNormal.matrix[1][0];
+      h_torus_normals->matrix[curPosition][2] = newNormal.matrix[2][0];
+      h_torus_normals->matrix[curPosition][3] = newNormal.matrix[3][0];
 
-      delete newPoint;
-      delete newNormal;
       curPosition++;
       
     }
     angle += step;
-    delete rot;
   }
-  delete point[0];
-  delete point[1];
-  delete point[2];
-  delete point[3];
-  delete point;
-
-  delete normal[0];
-  delete normal[1];
-  delete normal[2];
-  delete normal[3];
-  delete normal;
+  delete rot;
 }
 
 ////////////////////////////////
 // Generate the surface table //
 ////////////////////////////////
-int**  generateSurfaceTable()
+void  generateSurfaceTable()
 {
   //Yu-Yang: assumming rings are one after the other.
   //assumming matrixes are: arr[ellipse_number][x y z 1]
  
   // we need a surface for every point in the torus
-  int** surface_table = new int * [number_torus_points];
-  
-  //init array
-  for(int i=0; i < number_torus_points; i++) {
-    // every surface is made of 4 points
-    surface_table[i] = new int[4];
-  }
+  h_torus_surface = new CustomMatrix<int>(number_torus_points, 4);
 
   //for each ring on the torus
   for(int i=0; i < number_sweep_steps; i++) {
@@ -327,16 +311,16 @@ int**  generateSurfaceTable()
         //last point in a ring
         if (torus_point % number_ellipse_points == 0) {
           //create surface square joining the last 2 points of the rings with the first two
-          surface_table[torus_point-1][0] = torus_point;
-          surface_table[torus_point-1][1] = torus_point + number_ellipse_points;
-          surface_table[torus_point-1][2] = torus_point + 1;
-          surface_table[torus_point-1][3] = torus_point + 1 - number_ellipse_points;
+          h_torus_surface->matrix[torus_point-1][0] = torus_point;
+          h_torus_surface->matrix[torus_point-1][1] = torus_point + number_ellipse_points;
+          h_torus_surface->matrix[torus_point-1][2] = torus_point + 1;
+          h_torus_surface->matrix[torus_point-1][3] = torus_point + 1 - number_ellipse_points;
         } else {
           //create surface square        
-          surface_table[torus_point-1][0] = torus_point;
-          surface_table[torus_point-1][1] = torus_point + number_ellipse_points;
-          surface_table[torus_point-1][2] = torus_point + number_ellipse_points + 1;
-          surface_table[torus_point-1][3] = torus_point + 1;
+          h_torus_surface->matrix[torus_point-1][0] = torus_point;
+          h_torus_surface->matrix[torus_point-1][1] = torus_point + number_ellipse_points;
+          h_torus_surface->matrix[torus_point-1][2] = torus_point + number_ellipse_points + 1;
+          h_torus_surface->matrix[torus_point-1][3] = torus_point + 1;
         }
 
       //if last ring
@@ -345,113 +329,71 @@ int**  generateSurfaceTable()
         //last point in a ring
         if (torus_point % number_ellipse_points == 0) {
           //create surface square joining the last 2 points of the torus with the first two
-          surface_table[torus_point-1][0] = torus_point;
-          surface_table[torus_point-1][1] = 1;
-          surface_table[torus_point-1][2] = 2;
-          surface_table[torus_point-1][3] = torus_point + 1 - number_ellipse_points;
+          h_torus_surface->matrix[torus_point-1][0] = torus_point;
+          h_torus_surface->matrix[torus_point-1][1] = 1;
+          h_torus_surface->matrix[torus_point-1][2] = 2;
+          h_torus_surface->matrix[torus_point-1][3] = torus_point + 1 - number_ellipse_points;
         } else {
           //create surface square
-          surface_table[torus_point-1][0] = torus_point;
-          surface_table[torus_point-1][1] = (torus_point + number_ellipse_points) - number_torus_points;
-          surface_table[torus_point-1][2] = (torus_point + number_ellipse_points) - number_torus_points + 1;
-          surface_table[torus_point-1][3] = torus_point + 1;
+          h_torus_surface->matrix[torus_point-1][0] = torus_point;
+          h_torus_surface->matrix[torus_point-1][1] = (torus_point + number_ellipse_points) - number_torus_points;
+          h_torus_surface->matrix[torus_point-1][2] = (torus_point + number_ellipse_points) - number_torus_points + 1;
+          h_torus_surface->matrix[torus_point-1][3] = torus_point + 1;
         }
       } 
     }
   }
-
-  return surface_table;
 }
 
-void rotateTorus() {
-  float** rotmatX = rotmat_X(5);
-  float** rotmatZ = rotmat_Z(10);
-  float** point = new float*[4];
-  point[0] = new float[1];
-  point[1] = new float[1];
-  point[2] = new float[1];
-  point[3] = new float[1];
 
-  float **normal = new float*[4];
-  normal[0] = new float[1];
-  normal[1] = new float[1];
-  normal[2] = new float[1];
-  normal[3] = new float[1];
+////////////////////
+// Torus rotation //
+////////////////////
+void rotateTorus() {
+  CustomMatrix<float>* rotmatX = rotmat_X(torus_rotation[0]);
+  CustomMatrix<float>* rotmatZ = rotmat_Z(torus_rotation[2]);
+  CustomMatrix<float> point(4,1);
+  CustomMatrix<float> normal(4,1);
 
   for (int i = 0; i < number_torus_points; i++) {
-    point[0][0] = h_torus_vertex[i][0];
-    point[1][0] = h_torus_vertex[i][1];
-    point[2][0] = h_torus_vertex[i][2];
-    point[3][0] = h_torus_vertex[i][3];
+    point.matrix[0][0] = h_torus_vertex->matrix[i][0];
+    point.matrix[1][0] = h_torus_vertex->matrix[i][1];
+    point.matrix[2][0] = h_torus_vertex->matrix[i][2];
+    point.matrix[3][0] = h_torus_vertex->matrix[i][3];
 
-    normal[0][0] = h_torus_normals[i][0];
-    normal[1][0] = h_torus_normals[i][1];
-    normal[2][0] = h_torus_normals[i][2];
-    normal[3][0] = h_torus_normals[i][3];
+    normal.matrix[0][0] = h_torus_normals->matrix[i][0];
+    normal.matrix[1][0] = h_torus_normals->matrix[i][1];
+    normal.matrix[2][0] = h_torus_normals->matrix[i][2];
+    normal.matrix[3][0] = h_torus_normals->matrix[i][3];
 
-    float** combo = matrix_mul(rotmatZ, rotmatX, 4, 4, 4, 4);
-    float** newPoint = matrix_mul(combo, point, 4, 4, 4, 1);
-    float **newNormal = matrix_mul(combo, normal, 4, 4, 4, 1);
+    CustomMatrix<float> combo(4,4); 
+    CustomMatrix<float> newPoint(4,1); 
+    CustomMatrix<float> newNormal(4,1);
 
-    h_torus_vertex[i][0] = newPoint[0][0];
-    h_torus_vertex[i][1] = newPoint[1][0];
-    h_torus_vertex[i][2] = newPoint[2][0];
-    h_torus_vertex[i][3] = newPoint[3][0];
+    matrix_mul(rotmatZ, rotmatX, 4, 4, 4, 4, &combo);
+    matrix_mul(&combo, &point, 4, 4, 4, 1, &newPoint);
+    matrix_mul(&combo, &normal, 4, 4, 4, 1, &newNormal);
 
-    h_torus_normals[i][0] = newNormal[0][0];
-    h_torus_normals[i][1] = newNormal[1][0];
-    h_torus_normals[i][2] = newNormal[2][0];
-    h_torus_normals[i][3] = newNormal[3][0];
+    h_torus_vertex->matrix[i][0] = newPoint.matrix[0][0];
+    h_torus_vertex->matrix[i][1] = newPoint.matrix[1][0];
+    h_torus_vertex->matrix[i][2] = newPoint.matrix[2][0];
+    h_torus_vertex->matrix[i][3] = newPoint.matrix[3][0];
 
-    delete[] combo[0];
-    delete[] combo[1];
-    delete[] combo[2];
-    delete[] combo[3];
-    delete[] combo;
-
-    delete[] newPoint[0];
-    delete[] newPoint[1];
-    delete[] newPoint[2];
-    delete[] newPoint[3];
-    delete[] newPoint;
-
-    delete[] newNormal[0];
-    delete[] newNormal[1];
-    delete[] newNormal[2];
-    delete[] newNormal[3];
-    delete[] newNormal;
+    h_torus_normals->matrix[i][0] = newNormal.matrix[0][0];
+    h_torus_normals->matrix[i][1] = newNormal.matrix[1][0];
+    h_torus_normals->matrix[i][2] = newNormal.matrix[2][0];
+    h_torus_normals->matrix[i][3] = newNormal.matrix[3][0];
   }
 
-  delete[] rotmatX[0];
-  delete[] rotmatX[1];
-  delete[] rotmatX[2];
-  delete[] rotmatX[3];
-  delete[] rotmatX;
-
-  delete[] rotmatZ[0];
-  delete[] rotmatZ[1];
-  delete[] rotmatZ[2];
-  delete[] rotmatZ[3];
-  delete[] rotmatZ;
-
-  delete[] point[0];
-  delete[] point[1];
-  delete[] point[2];
-  delete[] point[3];
-  delete[] point;
-
-  delete normal[0];
-  delete normal[1];
-  delete normal[2];
-  delete normal[3];
-  delete normal;
+  delete rotmatX;
+  delete rotmatZ;
 }
 
 /////////////////////////
 /////// GL CODE /////////
 /////////////////////////
-GLfloat light_diffuse[] = {1.0, 0.0, 0.0, 1.0};  /* Red diffuse light. */
-GLfloat light_position[] = {500.0, 500.0, 1.0, 0.0};  /* Infinite light location. */
+GLfloat light_diffuse[] = {1.0, 0.0, 0.0, 0.1};  /* Red diffuse light. */
+GLfloat light_position[] = {0.0, 500.0, 1.0, 0.0};  /* Infinite light location. */
 GLfloat light_ambient[] = { 0.5, 0.0, 0.0, 1.0 };
 
 void drawBox()
@@ -462,21 +404,35 @@ void drawBox()
   for (int i = 0; i < number_torus_points; i++) {
     glBegin(GL_QUADS);
 
-    normal[0] = h_torus_normals[i][0];
-    normal[1] = h_torus_normals[i][1];
-    normal[2] = h_torus_normals[i][2];
+    normal[0] = h_torus_normals->matrix[i][0];
+    normal[1] = h_torus_normals->matrix[i][1];
+    normal[2] = h_torus_normals->matrix[i][2];
 
     glNormal3fv(&normal[0]);
-    glVertex3fv(&h_torus_vertex[h_torus_surface[i][0]-1][0]);
-    glVertex3fv(&h_torus_vertex[h_torus_surface[i][1]-1][0]);
-    glVertex3fv(&h_torus_vertex[h_torus_surface[i][2]-1][0]);
-    glVertex3fv(&h_torus_vertex[h_torus_surface[i][3]-1][0]);
+    glVertex3fv(&h_torus_vertex->matrix[h_torus_surface->matrix[i][0]-1][0]);
+    glVertex3fv(&h_torus_vertex->matrix[h_torus_surface->matrix[i][1]-1][0]);
+    glVertex3fv(&h_torus_vertex->matrix[h_torus_surface->matrix[i][2]-1][0]);
+    glVertex3fv(&h_torus_vertex->matrix[h_torus_surface->matrix[i][3]-1][0]);
     glEnd();
   }
+
+  delete[] normal;
 }
 
 void display()
 {
+  double currentTime = glutGet(GLUT_ELAPSED_TIME);
+  cout<<currentTime<<endl;
+  nbFrames++;
+  if ( currentTime - lastTime >= 1000 ){ // If last prinf() was more than 1 sec ago
+    // printf and reset timer
+    char buffer[16];
+    snprintf(buffer, 16, "FPS: %d", nbFrames);
+
+    glutSetWindowTitle(buffer);
+    nbFrames = 0;
+    lastTime = currentTime;
+  }
   rotateTorus();
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   drawBox();
@@ -488,9 +444,10 @@ void init()
 {
   /* Enable a single OpenGL light. */
   glEnable(GL_DEPTH_TEST);
-  glShadeModel (GL_SMOOTH);
+  glEnable(GL_NORMALIZE);
   glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
   glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
+  glLightfv(GL_LIGHT0, GL_SPECULAR, light_diffuse);
   glLightfv(GL_LIGHT0, GL_POSITION, light_position);
   glEnable(GL_LIGHT0);
   glEnable(GL_LIGHTING);
@@ -503,11 +460,11 @@ void init()
   glMatrixMode(GL_PROJECTION);
   gluPerspective( /* field of view in degree */ 40.0,
     /* aspect ratio */ 1.0,
-    /* Z near */ 1.0, /* Z far */ 100000.0);
+    /* Z near */ 1.0, /* Z far */ 10000.0);
   glMatrixMode(GL_MODELVIEW);
-  gluLookAt(0.0, 2000.0, 0.0,  /* eye is at (0,0,5) */
+  gluLookAt(0.0, 2000.0, 0.0,  /* eye is at (0,2000,0) */
     0.0, 0.0, 0.0,      /* center is at (0,0,0) */
-    0.0, 0.0, 1.0);      /* up is in positive Y direction */
+    0.0, 0.0, 1.0);      /* up is in positive Z direction */
 
 }
 
@@ -549,7 +506,7 @@ int main(int argc, char** argv)
 
   sweep();
 
-  h_torus_surface = generateSurfaceTable();
+  generateSurfaceTable();
 
 
   cutilCheckError(cutStopTimer(timer));
@@ -560,8 +517,8 @@ int main(int argc, char** argv)
   //Log througput
   printf("Seconds: %.4f \n", dSeconds);
 
-  writeToFile("vertex_table.m", "vTable", h_torus_vertex, number_torus_points, 4);
-  writeToFile("surface_table.m", "faces", h_torus_surface, number_torus_points, 4);
+  //writeToFile("vertex_table.m", "vTable", h_torus_vertex->matrix, number_torus_points, 4);
+  //writeToFile("surface_table.m", "faces", h_torus_surface->matrix, number_torus_points, 4);
 
   //
   // INIT DATA HERE
@@ -570,7 +527,6 @@ int main(int argc, char** argv)
   // print information
   cout << "Number of ellipse vertices : " << number_ellipse_points << endl;
   cout << "Number of rotational sweep steps : " << number_sweep_steps << endl;
-  //cout << "Rotational sweep origin : " << "[" << sweep_origin[0] << ", " << sweep_origin[1] << ", " << sweep_origin[2] << "]" << endl;
 
   // check if kernel execution generated and error
   cutilCheckMsg("Kernel execution failed");
