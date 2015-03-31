@@ -31,12 +31,12 @@ float* d_torus_vertex;  // The points of the generated torus.
 float* d_torus_normals; // The normals of the generated torus.
 long* h_torus_surface; // The surface table of the generated torus.
 
-long number_sweep_steps = 1000;
+long number_sweep_steps = 500;
 long number_ellipse_points;
 long number_torus_points;
 long torus_rotation[] = {1, 0, 2}; // The X, Y and Z rotation of the torus in degrees, performed each frame.
 
-long nbFrames = 0;
+double nbFrames = 0;
 double lastTime = 0;
 
 char SEMI_COLON_CHAR = 59;
@@ -431,16 +431,18 @@ void drawTorus()
 void display()
 {
   double currentTime = glutGet(GLUT_ELAPSED_TIME);
-  nbFrames++;
-  if ( currentTime - lastTime >= 1000 ){ // If last prinf() was more than 1 sec ago
+  nbFrames += 1.0;
+  if ( currentTime - lastTime >= 1000 ){
     // prlongf and reset timer
     char buffer[32];
-    snprintf(buffer, 32, "Naive Torus - FPS: %d", nbFrames);
+    nbFrames += (currentTime - lastTime) / 1000.0;
+    snprintf(buffer, 32, "Naive Torus - FPS: %f", nbFrames);
 
     glutSetWindowTitle(buffer);
     nbFrames = 0;
     lastTime = currentTime;
   }
+
   //rotateTorus();
   launch_rotate_kernel(&h_torus_vertex[0], &h_torus_normals[0], &d_torus_vertex[0], &d_torus_normals[0], number_torus_points);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -484,6 +486,7 @@ void displayTorus(int argc, char **argv)
   glewInit();
   glutInit(&argc, argv);
   glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
+  glutInitWindowSize(1000,1000);
   glutCreateWindow("Torus");
   glutDisplayFunc(display);
   init();
@@ -494,9 +497,9 @@ void displayTorus(int argc, char **argv)
 //// END GL CODE ////////
 /////////////////////////
 
-/////////////////////////
-//// TIMERS  ////////////
-/////////////////////////
+//////////////
+// TIMERS  ///
+//////////////
 long getMilliCount(){
 	timeb tb;
 	ftime(&tb);

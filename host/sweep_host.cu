@@ -28,12 +28,12 @@ float* h_torus_vertex;  // The points of the generated torus.
 float* h_torus_normals; // The normals of the generated torus.
 int* h_torus_surface; // The surface table of the generated torus.
 
-int number_sweep_steps = 1000;
+int number_sweep_steps = 500;
 int number_ellipse_points;
 int number_torus_points;
 int torus_rotation[] = {1, 0, 2}; // The X, Y and Z rotation of the torus in degrees, performed each frame.
 
-int nbFrames = 0;
+double nbFrames = 0;
 double lastTime = 0;
 
 char SEMI_COLON_CHAR = 59;
@@ -350,10 +350,17 @@ void  generateSurfaceTable()
 // Torus rotation //
 ////////////////////
 void rotateTorus() {
+
   float rotmatX[16];
+  float rotmatY[16];
   float rotmatZ[16];
-  rotmat_X(torus_rotation[0], &rotmatX[0]);
-  rotmat_Z(torus_rotation[2], &rotmatZ[0]);
+
+  double time = glutGet(GLUT_ELAPSED_TIME);
+
+  rotmat_X(cos(time/5051)*3, &rotmatX[0]);
+  rotmat_Y(cos(time/2063)*3, &rotmatY[0]);
+  rotmat_Z(cos(time/1433)*2, &rotmatZ[0]);
+
   float point[4];
   float normal[4];
 
@@ -369,11 +376,13 @@ void rotateTorus() {
     normal[getIndex(2, 0, 1)] = h_torus_normals[getIndex(i, 2, 4)];
     normal[getIndex(3, 0, 1)] = h_torus_normals[getIndex(i, 3, 4)];
 
-    float combo[16]; 
+    float temp[16];
+    float combo[16];
     float newPoint[4]; 
     float newNormal[4];
 
-    matrix_mul(&rotmatZ[0], &rotmatX[0], 4, 4, 4, 4, &combo[0]);
+    matrix_mul(&rotmatZ[0], &rotmatX[0], 4, 4, 4, 4, &temp[0]);
+    matrix_mul(&rotmatY[0], &temp[0], 4, 4, 4, 4, &combo[0]);
     matrix_mul(&combo[0], &point[0], 4, 4, 4, 1, &newPoint[0]);
     matrix_mul(&combo[0], &normal[0], 4, 4, 4, 1, &newNormal[0]);
 
@@ -424,17 +433,19 @@ void drawTorus()
 void display()
 {
   double currentTime = glutGet(GLUT_ELAPSED_TIME);
-  nbFrames++;
-  if ( currentTime - lastTime >= 1000 ){ // If last prinf() was more than 1 sec ago
-    // printf and reset timer
+  nbFrames += 1.0;
+  if ( currentTime - lastTime >= 1000 ){
+    // prlongf and reset timer
     char buffer[32];
-    snprintf(buffer, 32, "Host Torus - FPS: %d", nbFrames);
+    nbFrames += (currentTime - lastTime) / 1000.0;
+    snprintf(buffer, 32, "Naive Torus - FPS: %f", nbFrames);
 
     glutSetWindowTitle(buffer);
     nbFrames = 0;
     lastTime = currentTime;
   }
-  rotateTorus();
+
+  //rotateTorus();
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   drawTorus();
   glutSwapBuffers();
@@ -476,6 +487,7 @@ void displayTorus(int argc, char **argv)
   glewInit();
   glutInit(&argc, argv);
   glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
+  glutInitWindowSize(1000,1000);
   glutCreateWindow("Torus");
   glutDisplayFunc(display);
   init();
@@ -514,19 +526,7 @@ int main(int argc, char** argv)
   h_ellipse_normals = readFromFile("../ellipse_normals.txt");
   start = getMilliCount();
   sweep();
-  
-  float rot[16];
-  rotmat_Y(45, rot);
-  writeToConsole(&rot[0], 4, 4);
-  cout<<endl;
-  float point[] = {426.565, 192.814, 0 , 1 };
-  float newPoint[4];
-  matrix_mul(&rot[0], &point[0], 4, 4, 4, 1, &newPoint[0]);
-
-  writeToConsole(&newPoint[0], 4, 1);
-  
-  //cout<<getSize(number_torus_points, 4)<<endl;
-
+ 
   span = getMilliSpan(start);
   cout<<"Generate torus vertex table: "<<span<< " ms"<<endl;
 

@@ -1,103 +1,88 @@
 
+// OpenGL Graphics includes
+#include <GL/glew.h>
+#if defined (__APPLE__) || defined(MACOSX)
+#include <GLUT/glut.h>
+#else
+#include <GL/freeglut.h>
+#endif
+
 #include "cutil_inline.h"
 #include <iostream>
 #include "../custom_matrix.cpp"
 #define PI 3.14159265
+#define num_rpb 128
+
 using namespace std;
 
-
 ///////////////////////////
-// Matrix multiplication //
+// MATRIX MULTIPLICATION //
 ///////////////////////////
-// X is the number of ROWS, Y is the number of COLS.
-__device__ void matrix_mulk(float* a, float* b, long arows, long acols, long brows, long bcols, float* out)
+__global__ void matrix_mulk(float* a, float* b, float* c, long acols, long bcols, float* out1, float* out2)
 {
-  //matrix_mul(&a[0], &b[0], 4, 1, 1, 4, &c[0]);
-  //for every row in the result
-  for(long i=0; i < arows; i++) {
-    //for every column in the result
-    for(long j=0; j < bcols; j++) {
-      float sum = 0;
-      //find the sum of the multiplied row and column
-      for(long k=0; k < acols; k++) {
-        sum += a[getIndex(i, k, acols)] * b[getIndex(k, j, bcols)];
-      }
-      out[getIndex(i, j, bcols)] = sum;
-    }
-  }
+  int row = (blockIdx.x*num_rpb) + (threadIdx.x>>2);
+  int col = threadIdx.x % 4;
+
+  //transformed B matrix
+  out1[getIndex(row, col, 4)] =  a[getIndex(col, 0, acols)] * b[getIndex(row, 0, bcols)];
+  out1[getIndex(row, col, 4)] += a[getIndex(col, 1, acols)] * b[getIndex(row, 1, bcols)]; 
+  out1[getIndex(row, col, 4)] += a[getIndex(col, 2, acols)] * b[getIndex(row, 2, bcols)]; 
+  out1[getIndex(row, col, 4)] += a[getIndex(col, 3, acols)] * b[getIndex(row, 3, bcols)];
+
+  //transformed C matrix
+  out2[getIndex(row, col, 4)] =  a[getIndex(col, 0, acols)] * c[getIndex(row, 0, bcols)]; 
+  out2[getIndex(row, col, 4)] += a[getIndex(col, 1, acols)] * c[getIndex(row, 1, bcols)];
+  out2[getIndex(row, col, 4)] += a[getIndex(col, 2, acols)] * c[getIndex(row, 2, bcols)]; 
+  out2[getIndex(row, col, 4)] += a[getIndex(col, 3, acols)] * c[getIndex(row, 3, bcols)];
 }
 
 /////////////////////////////////////////
-// Rotation Transformation Matrix on X //
+// FORWARD DEFINITIONS FOR USE IN HOST //
 /////////////////////////////////////////
 void rotmat_X(float angle, float* rotation);
 void rotmat_Y(float angle, float* rotation);
 void rotmat_Z(float angle, float* rotation);
 void matrix_mul(float* a, float* b, long arows, long acols, long brows, long bcols, float* out);
 
-__global__ void rotate_torus_kernel(float* d_torus_vertex, float* d_torus_normals, long number_torus_points, float* rotCombined) {
-
-  float point[4];
-  float normal[4];
-
-  long i = blockIdx.x * blockDim.x + threadIdx.x;
-  // Rotate each point
-  if (i < number_torus_points) {
-    point[0] = d_torus_vertex[getIndex(i, 0, 4)];
-    point[1] = d_torus_vertex[getIndex(i, 1, 4)];
-    point[2] = d_torus_vertex[getIndex(i, 2, 4)];
-    point[3] = d_torus_vertex[getIndex(i, 3, 4)];
-
-    normal[0] = d_torus_normals[getIndex(i, 0, 4)];
-    normal[1] = d_torus_normals[getIndex(i, 1, 4)];
-    normal[2] = d_torus_normals[getIndex(i, 2, 4)];
-    normal[3] = d_torus_normals[getIndex(i, 3, 4)];
-
-    float newpoint[4]; 
-    float newNormal[4];
-
-    matrix_mulk(&rotCombined[0], &point[0], 4, 4, 4, 1, &newpoint[0]);
-    matrix_mulk(&rotCombined[0], &normal[0], 4, 4, 4, 1, &newNormal[0]);
-
-    d_torus_vertex[getIndex(i, 0, 4)] = newpoint[0];
-    d_torus_vertex[getIndex(i, 1, 4)] = newpoint[1];
-    d_torus_vertex[getIndex(i, 2, 4)] = newpoint[2];
-    d_torus_vertex[getIndex(i, 3, 4)] = newpoint[3];
-
-    d_torus_normals[getIndex(i, 0, 4)] = newNormal[0];
-    d_torus_normals[getIndex(i, 1, 4)] = newNormal[1];
-    d_torus_normals[getIndex(i, 2, 4)] = newNormal[2];
-    d_torus_normals[getIndex(i, 3, 4)] = newNormal[3];
-  }
-}
-
-void launch_rotate_kernel(float* h_torus_vertex, float* h_torus_normals, float* d_torus_vertex, float* d_torus_normals, long numPoints) {
+////////////////////////////
+// KERNEL LAUNCH FUNCTION //
+////////////////////////////
+void launch_rotate_kernel(float* h_torus_vertex, float* h_torus_normals, float* d_torus_vertex, float* d_torus_normals, long numPoints, float *d_out1, float *d_out2) {
 
   float rotmatX[16];
+  float rotmatY[16];
   float rotmatZ[16];
+  float rotTemp[16];
   float rotCombined[16];
-  rotmat_X(1, &rotmatX[0]);
-  rotmat_Z(2, &rotmatZ[0]);
 
-  matrix_mul(&rotmatZ[0], &rotmatX[0], 4, 4, 4, 4, &rotCombined[0]);
+  double time = glutGet(GLUT_ELAPSED_TIME);
+
+  rotmat_X(cos(time/5051)*3, &rotmatX[0]);
+  rotmat_Y(cos(time/2063)*3, &rotmatY[0]);
+  rotmat_Z(cos(time/1433)*2, &rotmatZ[0]);
+
+  matrix_mul(&rotmatZ[0], &rotmatX[0], 4, 4, 4, 4, &rotTemp[0]);
+  matrix_mul(&rotmatY[0], &rotTemp[0], 4, 4, 4, 4, &rotCombined[0]);
   float *d_rotmat;
+
   
   cutilSafeCall(cudaMalloc((void **) &d_rotmat, sizeof(float) * 16));
 
   long size = sizeof(float) * getSize(numPoints, 4);
+
+
 	// copy host memory to device
 	cutilSafeCall(cudaMemcpy(d_torus_vertex, h_torus_vertex, size, cudaMemcpyHostToDevice));
 	cutilSafeCall(cudaMemcpy(d_torus_normals, h_torus_normals, size, cudaMemcpyHostToDevice));
 	cutilSafeCall(cudaMemcpy(d_rotmat, rotCombined, sizeof(float) * 16, cudaMemcpyHostToDevice));
   cudaThreadSynchronize();
 
-  long block_size = 512;
-  long grid_size = numPoints / block_size + 1;
-  rotate_torus_kernel<<<grid_size, block_size>>>(d_torus_vertex, d_torus_normals, numPoints, d_rotmat);
+  matrix_mulk<<<numPoints/num_rpb + 1, 4*num_rpb>>>(d_rotmat, d_torus_vertex, d_torus_normals, 4, 4, d_out1, d_out2);
   cudaThreadSynchronize();
 
+  cutilSafeCall(cudaMemcpy(h_torus_vertex, d_out1, size, cudaMemcpyDeviceToHost));
+  cutilSafeCall(cudaMemcpy(h_torus_normals, d_out2, size, cudaMemcpyDeviceToHost));
 
+  cutilSafeCall(cudaFree(d_rotmat));
 
-  cutilSafeCall(cudaMemcpy(h_torus_vertex, d_torus_vertex, size, cudaMemcpyDeviceToHost));
-  cutilSafeCall(cudaMemcpy(h_torus_normals, d_torus_normals, size, cudaMemcpyDeviceToHost));
 }

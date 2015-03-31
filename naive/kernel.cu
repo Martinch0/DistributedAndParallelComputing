@@ -1,3 +1,12 @@
+
+// OpenGL Graphics includes
+#include <GL/glew.h>
+#if defined (__APPLE__) || defined(MACOSX)
+#include <GLUT/glut.h>
+#else
+#include <GL/freeglut.h>
+#endif
+
 #include "cutil_inline.h"
 #include <iostream>
 #include "../custom_matrix.cpp"
@@ -122,11 +131,16 @@ __device__ void rotmat_Zk(float angle, float* rotation)
   rotation[getIndex(3, 3, 4)] = 1;
 }
 
-__global__ void rotate_torus_kernel(float* d_torus_vertex, float* d_torus_normals, long number_torus_points) {
+__global__ void rotate_torus_kernel(float* d_torus_vertex, float* d_torus_normals, long number_torus_points, float time) {
+
   float rotmatX[16];
+  float rotmatY[16];
   float rotmatZ[16];
-  rotmat_Xk(1, &rotmatX[0]);
-  rotmat_Zk(2, &rotmatZ[0]);
+
+  rotmat_Xk(cos(time/5051)*3, &rotmatX[0]);
+  rotmat_Yk(cos(time/2063)*3, &rotmatY[0]);
+  rotmat_Zk(cos(time/1433)*2, &rotmatZ[0]);
+
   float point[4];
   float normal[4];
 
@@ -143,11 +157,13 @@ __global__ void rotate_torus_kernel(float* d_torus_vertex, float* d_torus_normal
     normal[getIndex(2, 0, 1)] = d_torus_normals[getIndex(i, 2, 4)];
     normal[getIndex(3, 0, 1)] = d_torus_normals[getIndex(i, 3, 4)];
 
+    float temp[16];
     float combo[16]; 
     float newpoint[4]; 
     float newNormal[4];
 
-    matrix_mulk(&rotmatZ[0], &rotmatX[0], 4, 4, 4, 4, &combo[0]);
+    matrix_mulk(&rotmatZ[0], &rotmatX[0], 4, 4, 4, 4, &temp[0]);
+    matrix_mulk(&rotmatY[0], &temp[0], 4, 4, 4, 4, &combo[0]);
     matrix_mulk(&combo[0], &point[0], 4, 4, 4, 1, &newpoint[0]);
     matrix_mulk(&combo[0], &normal[0], 4, 4, 4, 1, &newNormal[0]);
 
@@ -165,6 +181,7 @@ __global__ void rotate_torus_kernel(float* d_torus_vertex, float* d_torus_normal
 
 void launch_rotate_kernel(float* h_torus_vertex, float* h_torus_normals, float* d_torus_vertex, float* d_torus_normals, long numPoints) {
 
+  double time = glutGet(GLUT_ELAPSED_TIME);
   long size = sizeof(float) * getSize(numPoints, 4);
 	// copy host memory to device
 	cutilSafeCall(cudaMemcpy(d_torus_vertex, h_torus_vertex, size, cudaMemcpyHostToDevice));
@@ -173,7 +190,7 @@ void launch_rotate_kernel(float* h_torus_vertex, float* h_torus_normals, float* 
 
   long block_size = 512;
   long grid_size = numPoints / block_size + 1;
-  rotate_torus_kernel<<<grid_size, block_size>>>(d_torus_vertex, d_torus_normals, numPoints);
+  rotate_torus_kernel<<<grid_size, block_size>>>(d_torus_vertex, d_torus_normals, numPoints, time);
   cudaThreadSynchronize();
 
 
