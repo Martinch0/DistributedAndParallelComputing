@@ -1,0 +1,101 @@
+============
+Description:
+============
+The project is to generate and rotate a torus.
+The rendering is done through OpenGL.
+The torus rendered has all lighting calculations done by recalculating normals every rotation.
+The torus is rendered using Phong lighting with a light source directly above the torus. The camera remains in the same position, and looking towards the origin where the torus is generated.
+
+The solutions have been separated into different respectively-named folders.
+
+We have the following implementations:
+-host: serves as reference to see how much parallelisation improved performance.
+-naive: serves as reference to see how much optimisations improved performance of a simple parallelisation of the solution.
+-optimised: final solution, optimises the performance.
+
+By default, the solution generates a torus with 500,000 vertex points and equal number of normals, ie, 500 sweep steps and 1000 ellipse points and normals.
+All points and normals are represented using homogenous coordinates.
+
+=======================
+Execution Instructions:
+=======================
+To execute any solution:
+
+1) change the directory such that the current working directory is the directory holding either of the solutions.
+    ie: cd <root directory>/host
+
+2) run 'make' inside the directory holding the solution. This will generate two directories: 'bin' and 'obj'.
+
+3) under directory 'bin/release', there will be an executable binary 'smb'. To execute the solution, execute this file.
+    ie: ./bin/release/smb 
+
+==============
+Optimisations:
+==============
+
+1) Matrices:
+   ---------
+  Initially, we had implemented matrices using 2D Vector objects wrapped in a custom object.
+  This was to save effort calculating indeces and matrix dimensions.
+  However, this proved to be very inefficient. In the final solutions, we changed 2D Vector objects to 1D arrays.
+  This gave a drastic increase in performance.
+
+  Time required to generate the Torus:
+  -2D Vectors: 1600 ms on average.
+  -1D arrays: 140 ms on average.
+
+  This is a whole order of magnitude of difference.
+
+2) Parallelisation Optimisations:
+   ------------------------------
+  -rotation was changed, instead of using loops through every point in the vertex table, a single matrix multiplication transforms the whole torus vertex-table and normals matrix.
+  -moved generating the rotation transformation matrix to the host.
+  -moved memory allocation from the device to the host. 
+  -changed memory allocation such that it's done once at the start, when data is initialised, instead of every time we call the kernel.
+  -removed, from matrix multiplication, two for-loops used for traversing the matrix indeces. 
+   Replaced them with calculation of the row and collumn index using the blockId, threadId and the number of rows per block. 
+   This has a limit  of 256 rows per block since we have a 1024 size limit and we need to access 4 elements as these are homogeneous coordinates.
+  -for best results, blocksize has been set to a multiple of 32 since this way we can fit all operations in a block exactly into a warp.
+  -unrolled inner loop for matrix multiplication. Removed unecessary temporary variables.
+  -removed all conditionals by manipulating the grid and block dimensions to limit the threads accessing the matrix.
+   This prevents any divergence in the threads as there are no conditionals on which to diverge.
+  -replaced division with bit-wise operator.
+
+3) Performance calculations:
+   -------------------------
+  These calculations are done taking into account the time required for OpenGL to render the Torus after every calculation every frame.
+  
+  1. CPU Performance (HOST):
+     -----------------------
+    4 matrix multiplications
+    160 operations per point
+    500,000 points
+
+    80,000,000 operations per rotation
+    ~84 miliseconds
+    952,380,952 operations per second
+    = 0.95 GFlops
+    
+  2. Naive Performance (DEVICE): (221% increase from HOST)
+     ---------------------------  
+    160 operations per point
+    500,000 points
+
+    80,000,000 operations per rotation
+    ~38 miliseconds
+    2,105,263,157 operations per second
+    = 2.1 GFlops
+
+  3. Optimised Performance (OPTIMISED DEVICE): (138% increase from DEVICE, 305% increase from HOST)
+     -----------------------------------------
+    16 operations per coordinate of point
+    64 operations per point
+    500,000 points
+
+    32,000,000 operations per rotation
+    ~11 miliseconds
+    2,909,090,909 operations per second
+    = 2.9 GFlops
+
+    Optimisations highly reduced the number of operations per point, and optimised the remaining operations to be a bit faster.
+    This results in a big improvement in time taken.
