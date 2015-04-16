@@ -34,16 +34,17 @@ float* d_out2;  // The points of the generated torus.
 
 long* h_torus_surface; // The surface table of the generated torus.
 
-int number_sweep_steps = 500;
-int number_ellipse_points;
-long number_torus_points;
+long number_sweep_steps = 500; // How many sweep steps will be done in a 360 rotations.
+long number_ellipse_points; // The total number of points of the initial ellipse.
+long number_torus_points; // The total number of points of the generated torus.
 int torus_rotation[] = {1, 0, 2}; // The X, Y and Z rotation of the torus in degrees, performed each frame.
 
-double nbFrames = 0;
-double lastTime = 0;
+double nbFrames = 0; // Current frames per second.
+double lastTime = 0; // Last update of FPS.
 
 char SEMI_COLON_CHAR = 59;
 
+// Forward definitions of some functions from included files.
 long getIndex(long row, long col, long row_size);
 long getSize(long row_size, long col_size);
 void launch_rotate_kernel(float* h_torus_vertex, float* h_torus_normals, float* d_torus_vertex, float* d_torus_normals, long numPoints, float* d_out1, float* d_out2);
@@ -61,6 +62,7 @@ long countLines(char *filename) {
 ////////////////////
 // Read from file //
 ////////////////////
+// Reads the points of the predifined ellipse. Must be 3D points.
 float* readFromFile(char *filename)
 {
   ifstream fin(filename);
@@ -232,14 +234,20 @@ void rotmat_Z(float angle, float* rotation)
 void sweep()
 {
 
+  // Define the size of the rotations step
   float step = 360.0f / number_sweep_steps;
+
+  // The current angle
   float angle = 0;
+  // The current point of the torus
   long curPosition = 0;
 
+  // Preallocating matrices for intermediate results.
   float rot[16];
   float point[4];
   float normal[4];
 
+  // Calculate the number of torus points and allocate the required memory.
   number_torus_points = number_sweep_steps * number_ellipse_points;
   h_torus_vertex = new float[getSize(number_torus_points, 4)];//torus points
   h_torus_normals = new float[getSize(number_torus_points, 4)];//torus normals
@@ -265,7 +273,7 @@ void sweep()
       float newPoint[4];
       float newNormal[4];
 
-      // Rotate the point
+      // Rotate the point and its normal
       matrix_mul(&rot[0], &point[0], 4, 4, 4, 1, &newPoint[0]);
       matrix_mul(&rot[0], &normal[0], 4, 4, 4, 1, &newNormal[0]);
 
@@ -282,6 +290,7 @@ void sweep()
       curPosition++;
       
     }
+    // Increase the current angle.
     angle += step;
   }
 }
@@ -345,50 +354,6 @@ void  generateSurfaceTable()
   }
 }
 
-
-////////////////////
-// Torus rotation //
-////////////////////
-void rotateTorus() {
-  float rotmatX[16];
-  float rotmatZ[16];
-  rotmat_X(torus_rotation[0], &rotmatX[0]);
-  rotmat_Z(torus_rotation[2], &rotmatZ[0]);
-  float point[4];
-  float normal[4];
-
-  // Rotate each point
-  for (long i = 0; i < number_torus_points; i++) {
-    point[getIndex(0, 0, 1)] = h_torus_vertex[getIndex(i, 0, 4)];
-    point[getIndex(1, 0, 1)] = h_torus_vertex[getIndex(i, 1, 4)];
-    point[getIndex(2, 0, 1)] = h_torus_vertex[getIndex(i, 2, 4)];
-    point[getIndex(3, 0, 1)] = h_torus_vertex[getIndex(i, 3, 4)];
-
-    normal[getIndex(0, 0, 1)] = h_torus_normals[getIndex(i, 0, 4)];
-    normal[getIndex(1, 0, 1)] = h_torus_normals[getIndex(i, 1, 4)];
-    normal[getIndex(2, 0, 1)] = h_torus_normals[getIndex(i, 2, 4)];
-    normal[getIndex(3, 0, 1)] = h_torus_normals[getIndex(i, 3, 4)];
-
-    float combo[16]; 
-    float newPoint[4]; 
-    float newNormal[4];
-
-    matrix_mul(&rotmatZ[0], &rotmatX[0], 4, 4, 4, 4, &combo[0]);
-    matrix_mul(&combo[0], &point[0], 4, 4, 4, 1, &newPoint[0]);
-    matrix_mul(&combo[0], &normal[0], 4, 4, 4, 1, &newNormal[0]);
-
-    h_torus_vertex[getIndex(i, 0, 4)] = newPoint[getIndex(0, 0, 1)];
-    h_torus_vertex[getIndex(i, 1, 4)] = newPoint[getIndex(1, 0, 1)];
-    h_torus_vertex[getIndex(i, 2, 4)] = newPoint[getIndex(2, 0, 1)];
-    h_torus_vertex[getIndex(i, 3, 4)] = newPoint[getIndex(3, 0, 1)];
-
-    h_torus_normals[getIndex(i, 0, 4)] = newNormal[getIndex(0, 0, 1)];
-    h_torus_normals[getIndex(i, 1, 4)] = newNormal[getIndex(1, 0, 1)];
-    h_torus_normals[getIndex(i, 2, 4)] = newNormal[getIndex(2, 0, 1)];
-    h_torus_normals[getIndex(i, 3, 4)] = newNormal[getIndex(3, 0, 1)];
-  }
-}
-
 /////////////////////////
 /////// GL CODE /////////
 /////////////////////////
@@ -401,7 +366,7 @@ void drawTorus()
 {
   GLfloat * normal = new GLfloat[4];
 
-  // Draw every surface
+  // Draw every surface with its normal
   for (long i = 0; i < number_torus_points; i++) {
     glBegin(GL_QUADS);
 
@@ -423,6 +388,7 @@ void drawTorus()
 // Update the display window. Called every frame.
 void display()
 {
+  // Get the current elapsed time and calculate the Frames Per Second
   double currentTime = glutGet(GLUT_ELAPSED_TIME);
   nbFrames += 1.0;
   if ( currentTime - lastTime >= 1000 ){
@@ -436,8 +402,10 @@ void display()
     lastTime = currentTime;
   }
 
+  // Start the kernel and rotate the torus.
   launch_rotate_kernel(&h_torus_vertex[0], &h_torus_normals[0], &d_torus_vertex[0], &d_torus_normals[0], number_torus_points, d_out1, d_out2);
 
+  // Display the torus.
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   drawTorus();
   glutSwapBuffers();
@@ -513,22 +481,31 @@ long getMilliSpan(long nTimeStart){
 void initializeTorus() {
   long start;
   long span;
+
+  // Read the initial ellipse points and vertices.
   h_ellipse_vertex = readFromFile("../ellipse_matrix.txt");
   h_ellipse_normals = readFromFile("../ellipse_normals.txt");
 
-  start = getMilliCount();
+  start = getMilliCount(); // Timer
+
+  // Sweep the ellipse to generate the torus.
   sweep();
-  span = getMilliSpan(start);
+
+  span = getMilliSpan(start); // Timer
   cout<<"Generate torus vertex table: "<<span<< " ms; Points: "<<number_torus_points<<endl;
 
+  // Preallocate memory on the device for the torus points and normals.
   cutilSafeCall(cudaMalloc((void **) &d_torus_vertex, sizeof(float) * getSize(number_torus_points, 4)));
   cutilSafeCall(cudaMalloc((void **) &d_torus_normals, sizeof(float) * getSize(number_torus_points, 4)));
   cutilSafeCall(cudaMalloc((void **) &d_out1, sizeof(float) * getSize(number_torus_points, 4)));
   cutilSafeCall(cudaMalloc((void **) &d_out2, sizeof(float) * getSize(number_torus_points, 4)));
 
-  start = getMilliCount();
+  start = getMilliCount(); // Timer
+
+  // Generate the torus surface table
   generateSurfaceTable();
-  span = getMilliSpan(start);
+
+  span = getMilliSpan(start); // Timer
   cout<<"Generate torus surface table: "<<span<< " ms"<<endl;
 }
 
@@ -544,8 +521,10 @@ int main(int argc, char** argv)
 	cutilSafeCall(cudaGetDevice(&devID));
 	cutilSafeCall(cudaGetDeviceProperties(&props, devID));
 
+  // Initialize the torus.
   initializeTorus();
 
+  // Start the diplaying and the rotation of the torus.
   displayTorus(argc, argv);
 
 	cutilSafeCall(cudaFree(d_torus_vertex));

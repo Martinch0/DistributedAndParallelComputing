@@ -18,6 +18,7 @@ using namespace std;
 ///////////////////////////
 // MATRIX MULTIPLICATION //
 ///////////////////////////
+// acols and bcols is the number of columns of the two matrices.
 __global__ void matrix_mulk(float* a, float* b, float* c, long acols, long bcols, float* out1, float* out2)
 {
   int row = (blockIdx.x*num_rpb) + (threadIdx.x>>2);
@@ -49,35 +50,41 @@ void matrix_mul(float* a, float* b, long arows, long acols, long brows, long bco
 ////////////////////////////
 void launch_rotate_kernel(float* h_torus_vertex, float* h_torus_normals, float* d_torus_vertex, float* d_torus_normals, long numPoints, float *d_out1, float *d_out2) {
 
+  // Preallocate memory for the rotation matrices.
   float rotmatX[16];
   float rotmatY[16];
   float rotmatZ[16];
   float rotTemp[16];
   float rotCombined[16];
 
+  // Generate the rotation matrices based on the current elapsed time.
   double time = glutGet(GLUT_ELAPSED_TIME);
 
   rotmat_X(cos(time/5051)*3, &rotmatX[0]);
   rotmat_Y(cos(time/2063)*3, &rotmatY[0]);
   rotmat_Z(cos(time/1433)*2, &rotmatZ[0]);
 
+  // Calculate the combined matrix and allocate memory for it on the device.
   matrix_mul(&rotmatZ[0], &rotmatX[0], 4, 4, 4, 4, &rotTemp[0]);
   matrix_mul(&rotmatY[0], &rotTemp[0], 4, 4, 4, 4, &rotCombined[0]);
   float *d_rotmat;
   
   cutilSafeCall(cudaMalloc((void **) &d_rotmat, sizeof(float) * 16));
 
+  // Calculate the number of operations required.
   long size = sizeof(float) * getSize(numPoints, 4);
 
-	// copy host memory to device
+	// Copy host memory to device
 	cutilSafeCall(cudaMemcpy(d_torus_vertex, h_torus_vertex, size, cudaMemcpyHostToDevice));
 	cutilSafeCall(cudaMemcpy(d_torus_normals, h_torus_normals, size, cudaMemcpyHostToDevice));
 	cutilSafeCall(cudaMemcpy(d_rotmat, rotCombined, sizeof(float) * 16, cudaMemcpyHostToDevice));
   cudaThreadSynchronize();
 
+  // Start the kernel
   matrix_mulk<<<numPoints/num_rpb + 1, 4*num_rpb>>>(d_rotmat, d_torus_vertex, d_torus_normals, 4, 4, d_out1, d_out2);
   cudaThreadSynchronize();
 
+  // Copy device memory to host.
   cutilSafeCall(cudaMemcpy(h_torus_vertex, d_out1, size, cudaMemcpyDeviceToHost));
   cutilSafeCall(cudaMemcpy(h_torus_normals, d_out2, size, cudaMemcpyDeviceToHost));
 
