@@ -1,3 +1,16 @@
+/////////////////////////////////////////////////////////////////////////////
+// 
+//  NAIVE IMPLEMENTATION OF TORUS ROTATION
+//  DISTRIBUTED AND PARALLEL COMPUTATION MINIPROJECT
+//  2014-2015
+//  
+//  This is the naive device implementation of torus rotation.
+//  The torus is generated using a sweep function and a matrix file it reads.
+//  For more information, refer to the README file attached.
+//  
+//  authors: Martin Mihov (1229174) and Yu-Yang Lin (1228863)
+//
+//////////////////////////////////////////////////////////////////////////////
 
 // OpenGL Graphics includes
 #include <GL/glew.h>
@@ -208,8 +221,6 @@ void launch_rotate_kernel(float* h_torus_vertex, float* h_torus_normals, float* 
   // Run the kernel.
   rotate_torus_kernel<<<grid_size, block_size>>>(d_torus_vertex, d_torus_normals, numPoints, time);
   cudaThreadSynchronize();
-
-
 
   cutilSafeCall(cudaMemcpy(h_torus_vertex, d_torus_vertex, size, cudaMemcpyDeviceToHost));
   cutilSafeCall(cudaMemcpy(h_torus_normals, d_torus_normals, size, cudaMemcpyDeviceToHost));
