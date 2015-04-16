@@ -64,12 +64,10 @@ void launch_rotate_kernel(float* h_torus_vertex, float* h_torus_normals, float* 
   matrix_mul(&rotmatZ[0], &rotmatX[0], 4, 4, 4, 4, &rotTemp[0]);
   matrix_mul(&rotmatY[0], &rotTemp[0], 4, 4, 4, 4, &rotCombined[0]);
   float *d_rotmat;
-
   
   cutilSafeCall(cudaMalloc((void **) &d_rotmat, sizeof(float) * 16));
 
   long size = sizeof(float) * getSize(numPoints, 4);
-
 
 	// copy host memory to device
 	cutilSafeCall(cudaMemcpy(d_torus_vertex, h_torus_vertex, size, cudaMemcpyHostToDevice));
