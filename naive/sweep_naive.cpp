@@ -31,16 +31,18 @@ float* d_torus_vertex;  // The points of the generated torus.
 float* d_torus_normals; // The normals of the generated torus.
 long* h_torus_surface; // The surface table of the generated torus.
 
-long number_sweep_steps = 500;
-long number_ellipse_points;
-long number_torus_points;
+long number_sweep_steps = 500; // How many sweep steps will be done in a 360 rotations.
+long number_ellipse_points; // The total number of points of the initial ellipse.
+long number_torus_points; // The total number of points of the generated torus.
 long torus_rotation[] = {1, 0, 2}; // The X, Y and Z rotation of the torus in degrees, performed each frame.
 
-double nbFrames = 0;
-double lastTime = 0;
+double nbFrames = 0; // Current frames per second.
+double lastTime = 0; // Last update of FPS.
 
 char SEMI_COLON_CHAR = 59;
 
+
+// Forward definitions of some functions from included files.
 long getIndex(long row, long col, long row_size);
 long getSize(long row_size, long col_size);
 void launch_rotate_kernel(float* h_torus_vertex, float* h_torus_normals, float* d_torus_vertex, float* d_torus_normals, long numPoints);
@@ -58,6 +60,7 @@ long countLines(char *filename) {
 ////////////////////
 // Read from file //
 ////////////////////
+// Reads the points of the predifined ellipse. Must be 3D points.
 float* readFromFile(char *filename)
 {
   ifstream fin(filename);
@@ -229,14 +232,20 @@ void rotmat_Z(float angle, float* rotation)
 void sweep()
 {
 
+  // Define the size of the rotations step
   float step = 360.0f / number_sweep_steps;
+
+  // The current angle
   float angle = 0;
+  // The current point of the torus
   long curPosition = 0;
 
+  // Preallocating matrices for intermediate results.
   float rot[16];
-  float polong[4];
+  float point[4];
   float normal[4];
 
+  // Calculate the number of torus points and allocate the required memory.
   number_torus_points = number_sweep_steps * number_ellipse_points;
   h_torus_vertex = new float[getSize(number_torus_points, 4)];//torus points
   h_torus_normals = new float[getSize(number_torus_points, 4)];//torus normals
@@ -245,12 +254,12 @@ void sweep()
   for(long i = 0; i<number_sweep_steps; i++) {
     rotmat_Y(angle, &rot[0]);
 
-    // for every ellipse polong
+    // for every ellipse point
     for(long j = 0; j<number_ellipse_points; j++) {
-      polong[getIndex(0, 0, 1)] = h_ellipse_vertex[getIndex(j, 0, 4)];
-      polong[getIndex(1, 0, 1)] = h_ellipse_vertex[getIndex(j, 1, 4)];
-      polong[getIndex(2, 0, 1)] = h_ellipse_vertex[getIndex(j, 2, 4)];
-      polong[getIndex(3, 0, 1)] = h_ellipse_vertex[getIndex(j, 3, 4)];
+      point[getIndex(0, 0, 1)] = h_ellipse_vertex[getIndex(j, 0, 4)];
+      point[getIndex(1, 0, 1)] = h_ellipse_vertex[getIndex(j, 1, 4)];
+      point[getIndex(2, 0, 1)] = h_ellipse_vertex[getIndex(j, 2, 4)];
+      point[getIndex(3, 0, 1)] = h_ellipse_vertex[getIndex(j, 3, 4)];
 
 
       normal[getIndex(0, 0, 1)] = h_ellipse_normals[getIndex(j, 0, 4)];
@@ -258,29 +267,18 @@ void sweep()
       normal[getIndex(2, 0, 1)] = h_ellipse_normals[getIndex(j, 2, 4)];
       normal[getIndex(3, 0, 1)] = h_ellipse_normals[getIndex(j, 3, 4)];
 
-
-      float newPolong[4];
+      float newPoint[4];
       float newNormal[4];
 
-      // Rotate the polong
-      matrix_mul(&rot[0], &polong[0], 4, 4, 4, 1, &newPolong[0]);
+      // Rotate the point and its normal
+      matrix_mul(&rot[0], &point[0], 4, 4, 4, 1, &newPoint[0]);
       matrix_mul(&rot[0], &normal[0], 4, 4, 4, 1, &newNormal[0]);
-/*
-      cout<<"begin matrix:"<<endl;
-      writeToConsole<float>(&rot[0], 4, 4);
-      cout<<endl;
-      writeToConsole<float>(&polong[0], 4, 1);
-      cout<<endl;
-      writeToConsole<float>(&newPolong[0], 4, 1);
-      cout<<endl;
-  */    
-      h_torus_vertex[getIndex(curPosition, 0, 4)] = newPolong[getIndex(0, 0, 1)];
-      h_torus_vertex[getIndex(curPosition, 1, 4)] = newPolong[getIndex(1, 0, 1)];
-      h_torus_vertex[getIndex(curPosition, 2, 4)] = newPolong[getIndex(2, 0, 1)];
-      h_torus_vertex[getIndex(curPosition, 3, 4)] = newPolong[getIndex(3, 0, 1)];
+
+      h_torus_vertex[getIndex(curPosition, 0, 4)] = newPoint[getIndex(0, 0, 1)];
+      h_torus_vertex[getIndex(curPosition, 1, 4)] = newPoint[getIndex(1, 0, 1)];
+      h_torus_vertex[getIndex(curPosition, 2, 4)] = newPoint[getIndex(2, 0, 1)];
+      h_torus_vertex[getIndex(curPosition, 3, 4)] = newPoint[getIndex(3, 0, 1)];
   
-      //cout<<h_torus_vertex[getIndex(curPosition, 0, 4)]<< ' '<<h_torus_vertex[getIndex(curPosition, 1, 4)]<< ' '<<h_torus_vertex[getIndex(curPosition, 2, 4)]<< ' '<< h_torus_vertex[getIndex(curPosition, 3, 4)]<<endl;
-      //cout<<newPolong[getIndex(0, 0, 1)]<<' '<<newPolong[getIndex(1, 0, 1)]<<' '<<newPolong[getIndex(2, 0, 1)]<<' '<<newPolong[getIndex(3, 0, 1)]<<endl;
       h_torus_normals[getIndex(curPosition, 0, 4)] = newNormal[getIndex(0, 0, 1)];
       h_torus_normals[getIndex(curPosition, 1, 4)] = newNormal[getIndex(1, 0, 1)];
       h_torus_normals[getIndex(curPosition, 2, 4)] = newNormal[getIndex(2, 0, 1)];
@@ -289,6 +287,8 @@ void sweep()
       curPosition++;
       
     }
+
+    // Increase the current angle.
     angle += step;
   }
 }
@@ -301,98 +301,54 @@ void  generateSurfaceTable()
   //Yu-Yang: assumming rings are one after the other.
   //assumming matrixes are: arr[ellipse_number][x y z 1]
  
-  // we need a surface for every polong in the torus
+  // we need a surface for every point in the torus
   h_torus_surface = new long[getSize(number_torus_points, 4)];
 
   //for each ring on the torus
   for(long i=0; i < number_sweep_steps; i++) {
-    //for each polong on the ring
+    //for each point on the ring
     for(long j=0; j < number_ellipse_points; j++) {
       
-      //torus polong is the ring number * points in an ellipse plus current polong counter.
-      long torus_polong = (i*number_ellipse_points) + j + 1;
+      //torus point is the ring number * points in an ellipse plus current point counter.
+      long torus_point = (i*number_ellipse_points) + j + 1;
 
       //if not last ring
-      if (torus_polong + number_ellipse_points -1 < number_torus_points) {
+      if (torus_point + number_ellipse_points -1 < number_torus_points) {
         
-        //last polong in a ring
-        if (torus_polong % number_ellipse_points == 0) {
+        //last point in a ring
+        if (torus_point % number_ellipse_points == 0) {
           //create surface square joining the last 2 points of the rings with the first two
-          h_torus_surface[getIndex(torus_polong-1, 0, 4)] = torus_polong;
-          h_torus_surface[getIndex(torus_polong-1, 1, 4)] = torus_polong + number_ellipse_points;
-          h_torus_surface[getIndex(torus_polong-1, 2, 4)] = torus_polong + 1;
-          h_torus_surface[getIndex(torus_polong-1, 3, 4)] = torus_polong + 1 - number_ellipse_points;
+          h_torus_surface[getIndex(torus_point-1, 0, 4)] = torus_point;
+          h_torus_surface[getIndex(torus_point-1, 1, 4)] = torus_point + number_ellipse_points;
+          h_torus_surface[getIndex(torus_point-1, 2, 4)] = torus_point + 1;
+          h_torus_surface[getIndex(torus_point-1, 3, 4)] = torus_point + 1 - number_ellipse_points;
         } else {
           //create surface square        
-          h_torus_surface[getIndex(torus_polong-1, 0, 4)] = torus_polong;
-          h_torus_surface[getIndex(torus_polong-1, 1, 4)] = torus_polong + number_ellipse_points;
-          h_torus_surface[getIndex(torus_polong-1, 2, 4)] = torus_polong + number_ellipse_points + 1;
-          h_torus_surface[getIndex(torus_polong-1, 3, 4)] = torus_polong + 1;
+          h_torus_surface[getIndex(torus_point-1, 0, 4)] = torus_point;
+          h_torus_surface[getIndex(torus_point-1, 1, 4)] = torus_point + number_ellipse_points;
+          h_torus_surface[getIndex(torus_point-1, 2, 4)] = torus_point + number_ellipse_points + 1;
+          h_torus_surface[getIndex(torus_point-1, 3, 4)] = torus_point + 1;
         }
 
       //if last ring
       } else {
 
-        //last polong in a ring
-        if (torus_polong % number_ellipse_points == 0) {
+        //last point in a ring
+        if (torus_point % number_ellipse_points == 0) {
           //create surface square joining the last 2 points of the torus with the first two
-          h_torus_surface[getIndex(torus_polong-1, 0, 4)] = torus_polong;
-          h_torus_surface[getIndex(torus_polong-1, 1, 4)] = 1;
-          h_torus_surface[getIndex(torus_polong-1, 2, 4)] = 2;
-          h_torus_surface[getIndex(torus_polong-1, 3, 4)] = torus_polong + 1 - number_ellipse_points;
+          h_torus_surface[getIndex(torus_point-1, 0, 4)] = torus_point;
+          h_torus_surface[getIndex(torus_point-1, 1, 4)] = 1;
+          h_torus_surface[getIndex(torus_point-1, 2, 4)] = 2;
+          h_torus_surface[getIndex(torus_point-1, 3, 4)] = torus_point + 1 - number_ellipse_points;
         } else {
           //create surface square
-          h_torus_surface[getIndex(torus_polong-1, 0, 4)] = torus_polong;
-          h_torus_surface[getIndex(torus_polong-1, 1, 4)] = (torus_polong + number_ellipse_points) - number_torus_points;
-          h_torus_surface[getIndex(torus_polong-1, 2, 4)] = (torus_polong + number_ellipse_points) - number_torus_points + 1;
-          h_torus_surface[getIndex(torus_polong-1, 3, 4)] = torus_polong + 1;
+          h_torus_surface[getIndex(torus_point-1, 0, 4)] = torus_point;
+          h_torus_surface[getIndex(torus_point-1, 1, 4)] = (torus_point + number_ellipse_points) - number_torus_points;
+          h_torus_surface[getIndex(torus_point-1, 2, 4)] = (torus_point + number_ellipse_points) - number_torus_points + 1;
+          h_torus_surface[getIndex(torus_point-1, 3, 4)] = torus_point + 1;
         }
       } 
     }
-  }
-}
-
-
-////////////////////
-// Torus rotation //
-////////////////////
-void rotateTorus() {
-  float rotmatX[16];
-  float rotmatZ[16];
-  rotmat_X(torus_rotation[0], &rotmatX[0]);
-  rotmat_Z(torus_rotation[2], &rotmatZ[0]);
-  float polong[4];
-  float normal[4];
-
-  // Rotate each polong
-  for (long i = 0; i < number_torus_points; i++) {
-    polong[getIndex(0, 0, 1)] = h_torus_vertex[getIndex(i, 0, 4)];
-    polong[getIndex(1, 0, 1)] = h_torus_vertex[getIndex(i, 1, 4)];
-    polong[getIndex(2, 0, 1)] = h_torus_vertex[getIndex(i, 2, 4)];
-    polong[getIndex(3, 0, 1)] = h_torus_vertex[getIndex(i, 3, 4)];
-
-    normal[getIndex(0, 0, 1)] = h_torus_normals[getIndex(i, 0, 4)];
-    normal[getIndex(1, 0, 1)] = h_torus_normals[getIndex(i, 1, 4)];
-    normal[getIndex(2, 0, 1)] = h_torus_normals[getIndex(i, 2, 4)];
-    normal[getIndex(3, 0, 1)] = h_torus_normals[getIndex(i, 3, 4)];
-
-    float combo[16]; 
-    float newPolong[4]; 
-    float newNormal[4];
-
-    matrix_mul(&rotmatZ[0], &rotmatX[0], 4, 4, 4, 4, &combo[0]);
-    matrix_mul(&combo[0], &polong[0], 4, 4, 4, 1, &newPolong[0]);
-    matrix_mul(&combo[0], &normal[0], 4, 4, 4, 1, &newNormal[0]);
-
-    h_torus_vertex[getIndex(i, 0, 4)] = newPolong[getIndex(0, 0, 1)];
-    h_torus_vertex[getIndex(i, 1, 4)] = newPolong[getIndex(1, 0, 1)];
-    h_torus_vertex[getIndex(i, 2, 4)] = newPolong[getIndex(2, 0, 1)];
-    h_torus_vertex[getIndex(i, 3, 4)] = newPolong[getIndex(3, 0, 1)];
-
-    h_torus_normals[getIndex(i, 0, 4)] = newNormal[getIndex(0, 0, 1)];
-    h_torus_normals[getIndex(i, 1, 4)] = newNormal[getIndex(1, 0, 1)];
-    h_torus_normals[getIndex(i, 2, 4)] = newNormal[getIndex(2, 0, 1)];
-    h_torus_normals[getIndex(i, 3, 4)] = newNormal[getIndex(3, 0, 1)];
   }
 }
 
@@ -408,7 +364,7 @@ void drawTorus()
 {
   GLfloat * normal = new GLfloat[4];
 
-  // Draw every surface
+  // Draw every surface with its normal
   for (long i = 0; i < number_torus_points; i++) {
     glBegin(GL_QUADS);
 
@@ -430,10 +386,11 @@ void drawTorus()
 // Update the display window. Called every frame.
 void display()
 {
+  // Get the current elapsed time and calculate the Frames Per Second
   double currentTime = glutGet(GLUT_ELAPSED_TIME);
   nbFrames += 1.0;
   if ( currentTime - lastTime >= 1000 ){
-    // prlongf and reset timer
+    // printf and reset timer
     char buffer[32];
     nbFrames += (currentTime - lastTime) / 1000.0;
     snprintf(buffer, 32, "Naive Torus - FPS: %f", nbFrames);
@@ -443,8 +400,10 @@ void display()
     lastTime = currentTime;
   }
 
-  //rotateTorus();
+  // Launch the kernel to perform a rotation
   launch_rotate_kernel(&h_torus_vertex[0], &h_torus_normals[0], &d_torus_vertex[0], &d_torus_normals[0], number_torus_points);
+  
+  // Draw the torus.
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   drawTorus();
   glutSwapBuffers();
@@ -517,23 +476,29 @@ long getMilliSpan(long nTimeStart){
 void initializeTorus() {
   long start;
   long span;
+
+  // Read the initial ellipse points and vertices.
   h_ellipse_vertex = readFromFile("../ellipse_matrix.txt");
   h_ellipse_normals = readFromFile("../ellipse_normals.txt");
 
+  start = getMilliCount(); // Timer
 
-  start = getMilliCount();
+  // Sweep the ellipse to generate the torus.
   sweep();
-  span = getMilliSpan(start);
+
+  span = getMilliSpan(start); // Timer
   cout<<"Generate torus vertex table: "<<span<< " ms; Points: "<<number_torus_points<<endl;
 
-  
-
+  // Preallocate memory on the device for the torus points and normals.
   cutilSafeCall(cudaMalloc((void **) &d_torus_vertex, sizeof(float) * getSize(number_torus_points, 4)));
   cutilSafeCall(cudaMalloc((void **) &d_torus_normals, sizeof(float) * getSize(number_torus_points, 4)));
 
-  start = getMilliCount();
+  start = getMilliCount(); // Timer
+
+  // Generate the torus surface table
   generateSurfaceTable();
-  span = getMilliSpan(start);
+
+  span = getMilliSpan(start); // Timer
   cout<<"Generate torus surface table: "<<span<< " ms"<<endl;
 }
 
@@ -549,8 +514,10 @@ int main(int argc, char** argv)
 	cutilSafeCall(cudaGetDevice(&devID));
 	cutilSafeCall(cudaGetDeviceProperties(&props, devID));
 
+  // Initialize the torus.
   initializeTorus();
 
+  // Start the diplaying and the rotation of the torus.
   displayTorus(argc, argv);
 
 	cutilSafeCall(cudaFree(d_torus_vertex));

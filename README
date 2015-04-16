@@ -16,6 +16,8 @@ We have the following implementations:
 By default, the solution generates a torus with 500,000 vertex points and equal number of normals, ie, 500 sweep steps and 1000 ellipse points and normals.
 All points and normals are represented using homogenous coordinates.
 
+Github repository: https://github.com/Martinch0/DistributedAndParallelComputing
+
 =======================
 Execution Instructions:
 =======================

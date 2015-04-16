@@ -17,7 +17,9 @@ using namespace std;
 ///////////////////////////
 // Matrix multiplication //
 ///////////////////////////
-// X is the number of ROWS, Y is the number of COLS.
+// arows and brows is the number of ROWS in a and b, respectively
+// acols and bcols is the number of COLS.
+// The resulting matrix is saved in out, which needs to be preallocated.
 __device__ void matrix_mulk(float* a, float* b, long arows, long acols, long brows, long bcols, float* out)
 {
   //matrix_mul(&a[0], &b[0], 4, 1, 1, 4, &c[0]);
@@ -131,12 +133,15 @@ __device__ void rotmat_Zk(float angle, float* rotation)
   rotation[getIndex(3, 3, 4)] = 1;
 }
 
+// The kernel for rotating the torus by one step.
 __global__ void rotate_torus_kernel(float* d_torus_vertex, float* d_torus_normals, long number_torus_points, float time) {
 
+  // Preallocate memory for the rotation matrices
   float rotmatX[16];
   float rotmatY[16];
   float rotmatZ[16];
 
+  // Calculate the rotation matrices based on the elapsed time.
   rotmat_Xk(cos(time/5051)*3, &rotmatX[0]);
   rotmat_Yk(cos(time/2063)*3, &rotmatY[0]);
   rotmat_Zk(cos(time/1433)*2, &rotmatZ[0]);
@@ -145,8 +150,8 @@ __global__ void rotate_torus_kernel(float* d_torus_vertex, float* d_torus_normal
   float normal[4];
 
   long i = blockIdx.x * blockDim.x + threadIdx.x;
-  // Rotate each point
-  if (i < number_torus_points) {
+  // Rotate the point with id corresponding to the current thread and block, and its normal
+  if (i < number_torus_points) { // If invalid point, do nothing
     point[getIndex(0, 0, 1)] = d_torus_vertex[getIndex(i, 0, 4)];
     point[getIndex(1, 0, 1)] = d_torus_vertex[getIndex(i, 1, 4)];
     point[getIndex(2, 0, 1)] = d_torus_vertex[getIndex(i, 2, 4)];
@@ -162,8 +167,11 @@ __global__ void rotate_torus_kernel(float* d_torus_vertex, float* d_torus_normal
     float newpoint[4]; 
     float newNormal[4];
 
+    // Calculate the combined transformation matrix
     matrix_mulk(&rotmatZ[0], &rotmatX[0], 4, 4, 4, 4, &temp[0]);
     matrix_mulk(&rotmatY[0], &temp[0], 4, 4, 4, 4, &combo[0]);
+
+    // Rotate the point and its normal
     matrix_mulk(&combo[0], &point[0], 4, 4, 4, 1, &newpoint[0]);
     matrix_mulk(&combo[0], &normal[0], 4, 4, 4, 1, &newNormal[0]);
 
@@ -179,17 +187,25 @@ __global__ void rotate_torus_kernel(float* d_torus_vertex, float* d_torus_normal
   }
 }
 
+// A function which initializes and starts the kernel.
 void launch_rotate_kernel(float* h_torus_vertex, float* h_torus_normals, float* d_torus_vertex, float* d_torus_normals, long numPoints) {
 
+  // Get the current ellapsed time.
   double time = glutGet(GLUT_ELAPSED_TIME);
+
+  // Calculate the number of operations needed.
   long size = sizeof(float) * getSize(numPoints, 4);
-	// copy host memory to device
+
+	// Copy host memory to device
 	cutilSafeCall(cudaMemcpy(d_torus_vertex, h_torus_vertex, size, cudaMemcpyHostToDevice));
 	cutilSafeCall(cudaMemcpy(d_torus_normals, h_torus_normals, size, cudaMemcpyHostToDevice));
   cudaThreadSynchronize();
 
+  // Calculate a suitable block and grid size for the kernel.
   long block_size = 512;
   long grid_size = numPoints / block_size + 1;
+
+  // Run the kernel.
   rotate_torus_kernel<<<grid_size, block_size>>>(d_torus_vertex, d_torus_normals, numPoints, time);
   cudaThreadSynchronize();
 
