@@ -17,7 +17,7 @@ By default, the solution generates a torus with 500,000 vertex points and equal 
 All points and normals are represented using homogenous coordinates.
 
 Github repository: https://github.com/Martinch0/DistributedAndParallelComputing
-YouTube link to video demo: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+YouTube link to video demo: http://youtu.be/KCqLJ2fXXoA
 
 =======================
 Execution Instructions:
@@ -82,7 +82,7 @@ Optimisations:
     = 0.95 GFlops    
     ~10 fps out of maximum 30 fps
     
-  2. Naive Performance (DEVICE): (2.21x performance incrase from HOST)
+  2. Naive Performance (DEVICE): (2.21x performance increase from HOST)
      ---------------------------  
     160 operations per point
     500,000 points
@@ -93,7 +93,7 @@ Optimisations:
     = 2.1 GFlops
     ~15 fps out of maximum 30 fps
 
-  3. Optimised Performance (OPTIMISED DEVICE): (1.38x performance incrase from DEVICE, 3.05x performance incrase from HOST)
+  3. Optimised Performance (OPTIMISED DEVICE): (1.38x performance increase from DEVICE, 3.05x performance incrase from HOST)
      -----------------------------------------
     16 operations per coordinate of point
     64 operations per point
