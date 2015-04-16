@@ -1,3 +1,18 @@
+/////////////////////////////////////////////////////////////////////////////
+// 
+//  MAIN CPP SOURCE FOR NAIVE IMPLEMENTATION OF TORUS ROTATION
+//  DISTRIBUTED AND PARALLEL COMPUTATION MINIPROJECT
+//  2014-2015
+//  
+//  This is the main cpp code for the naive device implementation of torus rotation.
+//  This code uses OpenGL to render the torus, and calls the kernel to calculate the new torus to render.
+//  The torus is generated using a sweep function and a matrix file it reads.
+//  For more information, refer to the README file attached.
+//  
+//  authors: Martin Mihov (1229174) and Yu-Yang Lin (1228863)
+//
+//////////////////////////////////////////////////////////////////////////////
+
 #include "cutil_inline.h"
 #include <iostream>
 #include <fstream>

@@ -1,3 +1,18 @@
+/////////////////////////////////////////////////////////////////////////////
+// 
+//  KERNEL FOR OPTIMISED IMPLEMENTATION OF TORUS ROTATION
+//  DISTRIBUTED AND PARALLEL COMPUTATION MINIPROJECT
+//  2014-2015
+//  
+//  This is the kernel for the optimised device implementation of torus rotation.
+//  This kernel parallelises matrix multiplication and reduces the number of operations.
+//  This kernel is also simpler than the naive implementation kernel.
+//  The torus is generated using a sweep function and a matrix file it reads.
+//  For more information, refer to the README file attached.
+//  
+//  authors: Martin Mihov (1229174) and Yu-Yang Lin (1228863)
+//
+//////////////////////////////////////////////////////////////////////////////
 
 // OpenGL Graphics includes
 #include <GL/glew.h>

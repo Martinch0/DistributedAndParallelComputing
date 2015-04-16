@@ -1,10 +1,11 @@
 /////////////////////////////////////////////////////////////////////////////
 // 
-//  NAIVE IMPLEMENTATION OF TORUS ROTATION
+//  KERNEL FOR NAIVE IMPLEMENTATION OF TORUS ROTATION
 //  DISTRIBUTED AND PARALLEL COMPUTATION MINIPROJECT
 //  2014-2015
 //  
-//  This is the naive device implementation of torus rotation.
+//  This is the kernel for the naive device implementation of torus rotation.
+//  This kernel parallelises rotation of each point in the vertex table.
 //  The torus is generated using a sweep function and a matrix file it reads.
 //  For more information, refer to the README file attached.
 //  

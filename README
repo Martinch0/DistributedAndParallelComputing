@@ -17,6 +17,7 @@ By default, the solution generates a torus with 500,000 vertex points and equal 
 All points and normals are represented using homogenous coordinates.
 
 Github repository: https://github.com/Martinch0/DistributedAndParallelComputing
+YouTube link to video demo: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 =======================
 Execution Instructions:
@@ -66,6 +67,8 @@ Optimisations:
 3) Performance calculations:
    -------------------------
   These calculations are done taking into account the time required for OpenGL to render the Torus after every calculation every frame.
+  Maximum frames per second is 30 fps. This was measured by running OpenGL alone without any matrix calculations.
+  The limit was 30 fps to render a still torus of 500,000 points.
   
   1. CPU Performance (HOST):
      -----------------------
@@ -76,9 +79,10 @@ Optimisations:
     80,000,000 operations per rotation
     ~84 miliseconds
     952,380,952 operations per second
-    = 0.95 GFlops
+    = 0.95 GFlops    
+    ~10 fps out of maximum 30 fps
     
-  2. Naive Performance (DEVICE): (221% increase from HOST)
+  2. Naive Performance (DEVICE): (2.21x performance incrase from HOST)
      ---------------------------  
     160 operations per point
     500,000 points
@@ -87,8 +91,9 @@ Optimisations:
     ~38 miliseconds
     2,105,263,157 operations per second
     = 2.1 GFlops
+    ~15 fps out of maximum 30 fps
 
-  3. Optimised Performance (OPTIMISED DEVICE): (138% increase from DEVICE, 305% increase from HOST)
+  3. Optimised Performance (OPTIMISED DEVICE): (1.38x performance incrase from DEVICE, 3.05x performance incrase from HOST)
      -----------------------------------------
     16 operations per coordinate of point
     64 operations per point
@@ -98,6 +103,7 @@ Optimisations:
     ~11 miliseconds
     2,909,090,909 operations per second
     = 2.9 GFlops
+    ~22 fps out of maximum 30 fps
 
     Optimisations highly reduced the number of operations per point, and optimised the remaining operations to be a bit faster.
     This results in a big improvement in time taken.
