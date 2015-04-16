@@ -1,3 +1,17 @@
+/////////////////////////////////////////////////////////////////////////////
+// 
+//  HOST IMPLEMENTATION OF TORUS ROTATION
+//  DISTRIBUTED AND PARALLEL COMPUTATION MINIPROJECT
+//  2014-2015
+//  
+//  This is the host implementation of torus rotation.
+//  The torus is generated using a sweep function and a matrix file it reads.
+//  For more information, refer to the README file attached.
+//  
+//  authors: Martin Mihov (1229174) and Yu-Yang Lin (1228863)
+//
+//////////////////////////////////////////////////////////////////////////////
+
 #include "cutil_inline.h"
 #include <iostream>
 #include <fstream>
